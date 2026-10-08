@@ -1,6 +1,6 @@
 {
-  "owner": "OWNER",
-  "repo": "REPO",
+  "owner": "cvrtgbp2dn-code",
+  "repo": "jiehuan-helper",
   "branch": "main",
-  "_说明": "把 owner 改成你的 GitHub 用户名，repo 改成仓库名（例如 jiehuan-helper），branch 一般是 main。改完保存，然后运行 发布.bat 或 node _release/build-release.js"
+  "_说明": "GitHub 用户名和仓库名。改完保存，然后运行 发布.bat（或 node _release/build-release.js），脚本会自动把这些写进程序更新源并产出上传文件。"
 }
