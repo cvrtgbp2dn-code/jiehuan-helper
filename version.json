@@ -1,8 +1,8 @@
 {
-  "version": "5.5.0",
+  "version": "6.0.0",
   "date": "2026-10-08",
-  "notes": "- 精简帮助中心说明，只保留必要内容\n- 设置面板移除「安装包」一项",
-  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.5.0/app.asar",
-  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.5.0/checkout-helper-win32-x64.zip",
+  "notes": "- 设置面板重新整理为「计价 / 系统 / 关于」三块，更好找\n- 归属人列表支持拖动排序\n- 表格行支持拖动排序，双击单元格可改内容\n- 新增「检查更新」，有新版本自动提示、一键升级\n- 截图导入支持表格识别，自动拆出项目名、归属人、单数、错单",
+  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v6.0.0/app.asar",
+  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v6.0.0/checkout-helper-win32-x64.zip",
   "download": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/latest/download/checkout-helper-win32-x64.zip"
 }
