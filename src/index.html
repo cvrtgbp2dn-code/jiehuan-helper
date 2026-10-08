@@ -286,12 +286,6 @@ button.danger:hover{opacity:.88;color:#fff;border-color:var(--danger)}
           <span class="setver" id="verLabel">v—</span>
         </span>
       </div>
-      <div class="grp"><label>安装包</label>
-        <span class="segbtns">
-          <button type="button" class="sm" id="dlLinkBtn">复制下载链接</button>
-          <span class="setver">发给新同事用</span>
-        </span>
-      </div>
       <div class="grp">
         <span class="segbtns"><button type="button" class="sm" onclick="openHelp()">帮助中心</button></span>
       </div>
@@ -785,16 +779,6 @@ function checkUpdate(manual){
   }).catch(function(){ done(); if(manual) toast('检查更新失败'); });
 }
 document.getElementById('updCheckBtn').addEventListener('click', function(){ checkUpdate(true); });
-/* 复制「永久直达下载链接」：不管以后更新到哪个版本，这条链接永远有效、永远是最新版 */
-var DL_URL = 'https://github.com/OWNER/REPO/releases/latest/download/checkout-helper-win32-x64.zip';
-document.getElementById('dlLinkBtn').addEventListener('click', function(){
-  var done = function(){ toast('下载链接已复制，可直接发给同事'); };
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(DL_URL).then(done, function(){ window.prompt('复制下面的链接：', DL_URL); });
-  } else {
-    window.prompt('复制下面的链接：', DL_URL);
-  }
-});
 if(window.bridge && window.bridge.getAppVersion){
   window.bridge.getAppVersion().then(function(v){ if(v) document.getElementById('verLabel').textContent = 'v'+v; });
 }
