@@ -183,6 +183,8 @@ def main():
     print("== 3. 更新仓库文件 ==")
     ok = True
     ok &= put_file("version.json", "版本更新到 " + tag)
+    ok &= put_file("README.md", "同步项目主页说明")
+    ok &= put_file("docs/main.png", "同步主界面截图")
     ok &= put_file("_build/main.js", "更新程序代码")
     ok &= put_file("_build/index.html", "同步打包界面")
     ok &= put_file("_build/help.html", "同步帮助文档")
