@@ -4,6 +4,7 @@ _build/lib/
 _build/_staging/
 结账助手-win32-x64/
 _release/out/
+_release/.token
 *.zip
 
 # 系统垃圾文件
