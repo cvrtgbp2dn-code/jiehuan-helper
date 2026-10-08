@@ -1,8 +1,8 @@
 {
-  "version": "5.4.0",
+  "version": "5.5.0",
   "date": "2026-10-08",
-  "notes": "- 新增「复制下载链接」：设置 → 安装包，一键复制永久有效的下载链接\n- 这条链接永远指向最新版，转发给新同事即可，不用再传 160MB 压缩包\n- 更新弹窗里的「下载完整安装包」也改走这条永久链接",
-  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.4.0/app.asar",
-  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.4.0/checkout-helper-win32-x64.zip",
+  "notes": "- 精简帮助中心说明，只保留必要内容\n- 设置面板移除「安装包」一项",
+  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.5.0/app.asar",
+  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.5.0/checkout-helper-win32-x64.zip",
   "download": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/latest/download/checkout-helper-win32-x64.zip"
 }
