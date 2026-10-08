@@ -7,6 +7,14 @@ _release/out/
 _release/.token
 *.zip
 
+# 本地工具与临时文件
+.workbuddy/
+_release/_*.py
+_release/_*.ps1
+_release/_*.txt
+_release/_*.png
+_release/readme-preview.html
+
 # 系统垃圾文件
 Thumbs.db
 .DS_Store
