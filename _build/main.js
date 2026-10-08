@@ -255,7 +255,9 @@ ipcMain.handle('check-update', async () => {
         hasUpdate: cmpVer(latest, cur) > 0,
         notes: (info && info.notes) || '',
         asar: (info && info.asar) || '',      // 增量包（约 110KB，推荐）
-        full: (info && info.full) || ''       // 完整安装包（备用）
+        full: (info && info.full) || '',      // 完整安装包（本版本精确下载）
+        download: (info && info.download) ||  // 永久直达链接（始终指向最新版）
+          ('https://github.com/' + OWNER + '/' + REPO + '/releases/latest/download/checkout-helper-win32-x64.zip')
       };
     } catch (e) {
       lastErr = String((e && e.message) || e);
