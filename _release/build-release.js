@@ -128,21 +128,35 @@ try {
   log('! 完整安装包生成失败（可忽略，增量更新不需要它）：' + e.message);
 }
 
-// ---------- 5. 提示 ----------
-log('\n────────── 下一步：上传到 GitHub ──────────');
-log('1) 打开 https://github.com/' + cfg.owner + '/' + cfg.repo + '/releases/new');
-log('2) Tag 填 ' + tag + '，标题也填 ' + tag);
-log('3) 上传这两个文件（拖拽即可）：');
-log('     _release/out/app.asar');
-if (zipped) log('     _release/out/' + zipName);
-log('4) 点 Publish release');
-log('5) 把项目根目录的 version.json 覆盖到仓库根目录的 version.json（网页上直接编辑粘贴即可）并提交');
-log('   （每次更新都要做这步，同事才能收到新版本提示）');
+// ---------- 5. 自动发布到 GitHub ----------
+const tokenFile = path.join(__dirname, '.token');
+const canPublish = fs.existsSync(tokenFile) || process.env.GH_TOKEN;
+let published = false;
+if (canPublish) {
+  log('\n────────── 自动发布到 GitHub ──────────');
+  try {
+    execFileSync('python', [path.join(__dirname, 'publish.py')], { stdio: 'inherit' });
+    published = true;
+  } catch (e) {
+    log('! 自动发布失败，可稍后手动重试：python _release/publish.py');
+  }
+}
+
+// ---------- 6. 提示 ----------
+if (!published) {
+  log('\n────────── 下一步：上传到 GitHub ──────────');
+  log('1) 打开 https://github.com/' + cfg.owner + '/' + cfg.repo + '/releases/new');
+  log('2) Tag 填 ' + tag + '，标题也填 ' + tag);
+  log('3) 上传这两个文件（拖拽即可）：');
+  log('     _release/out/app.asar');
+  if (zipped) log('     _release/out/' + zipName);
+  log('4) 点 Publish release');
+  log('5) 把项目根目录的 version.json 覆盖到仓库根目录的 version.json 并提交');
+  log('');
+  log('提示：把 GitHub 授权保存到 _release/.token 后，这一步会全自动完成。');
+}
 log('');
-log('配置（版本检查）地址：');
-log('  国内推荐 ' + 'https://cdn.jsdelivr.net/gh/' + cfg.owner + '/' + cfg.repo + '@' + (cfg.branch || 'main') + '/version.json');
-log('  备用     ' + 'https://raw.githubusercontent.com/' + cfg.owner + '/' + cfg.repo + '/' + (cfg.branch || 'main') + '/version.json');
-log('（程序会自动依次尝试这两个地址，哪个通用哪个）');
+log('完整安装包（发给新同事）：结账助手-win32-x64-v' + ver.slice(0, 3) + '.zip');
 log('');
 
 // ---------- 工具：目录打包成 zip ----------
