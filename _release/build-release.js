@@ -7,7 +7,7 @@
  * 产出（都在 _release/out/ 里）：
  *   1. app.asar                                   ← 增量包（约 100KB），上传到 GitHub Release
  *   2. version.json                               ← 版本号文件，上传到仓库根目录
- *   3. checkout-helper-vX.Y.Z-win32-x64.zip       ← 完整安装包，上传到 GitHub Release（可选）
+ *   3. checkout-helper-win32-x64.zip              ← 完整安装包（固定文件名！）
  *
  * 同时会把 resources/app.asar 更新为最新（这样本地 结账助手-win32-x64 目录也是新版）。
  */
@@ -72,6 +72,13 @@ if (fs.existsSync(srcHtml)) {
   s = s.replace(/const REPO = '[^']*';/, "const REPO = '" + cfg.repo + "';");
   s = s.replace(/const BRANCH = '[^']*';/, "const BRANCH = '" + branch + "';");
   if (s !== before) { fs.writeFileSync(mainPath, s, 'utf8'); log('· 已写入更新源：' + cfg.owner + '/' + cfg.repo + '@' + branch); }
+
+  // 界面里的「复制下载链接」也要用真实用户名/仓库名
+  const htmlPath = path.join(BUILD, 'index.html');
+  let h = fs.readFileSync(htmlPath, 'utf8');
+  const hBefore = h;
+  h = h.replace(/'https:\/\/github\.com\/OWNER\/REPO\//, "'https://github.com/" + cfg.owner + "/" + cfg.repo + "/");
+  if (h !== hBefore) { fs.writeFileSync(htmlPath, h, 'utf8'); log('· 已写入下载链接：' + cfg.owner + '/' + cfg.repo); }
 })();
 
 const STAGE = path.join(BUILD, '_staging');
@@ -104,13 +111,16 @@ log('✓ 增量包 _release/out/app.asar（' + asarSize + ' KB）');
 
 // ---------- 3. 产出 version.json ----------
 const base = 'https://github.com/' + cfg.owner + '/' + cfg.repo + '/releases/download/' + tag + '/';
-const zipName = 'checkout-helper-' + ver + '-win32-x64.zip';
+// 安装包用固定文件名：这样 /releases/latest/download/<名字> 就成了永久有效的直达链接
+const zipName = 'checkout-helper-win32-x64.zip';
+const permanentUrl = 'https://github.com/' + cfg.owner + '/' + cfg.repo + '/releases/latest/download/' + zipName;
 const versionJson = {
   version: ver,
   date: new Date().toISOString().slice(0, 10),
   notes: notes,
-  asar: base + 'app.asar',
-  full: base + zipName
+  asar: base + 'app.asar',      // 增量包（带版本号目录，保证与版本严格对应）
+  full: base + zipName,         // 本版本的完整包（带版本号目录，精确下载）
+  download: permanentUrl        // 永久直达链接（始终指向最新版）
 };
 fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify(versionJson, null, 2) + '\n', 'utf8');
 // 同时写一份到项目根目录，这一份就是要提交到 GitHub 仓库根目录的 version.json
@@ -156,7 +166,9 @@ if (!published) {
   log('提示：把 GitHub 授权保存到 _release/.token 后，这一步会全自动完成。');
 }
 log('');
-log('完整安装包（发给新同事）：结账助手-win32-x64-v' + ver.slice(0, 3) + '.zip');
+log('完整安装包（发给新同事）：_release/out/' + zipName);
+log('永久直达下载链接（始终指向最新版）：');
+log('  ' + permanentUrl);
 log('');
 
 // ---------- 工具：目录打包成 zip ----------
