@@ -114,6 +114,28 @@ if (fs.existsSync(srcHtml)) {
   if (s !== before) { fs.writeFileSync(mainPath, s, 'utf8'); log('· 已写入更新源：' + cfg.owner + '/' + cfg.repo + '@' + branch); }
 })();
 
+// ---------- 保险：把所有 .bat 换成 CRLF 换行 ----------
+// cmd.exe 要求 .bat 用 CRLF；若被编辑器改成 LF，双击会报「系统找不到指定的路径」。
+// 打包前统一修正，避免把坏掉的 bat 发出去。
+(function fixBatLineEndings() {
+  const dirs = [APPDIR, ROOT, path.join(ROOT, '_release')];
+  let fixed = 0;
+  for (const d of dirs) {
+    if (!fs.existsSync(d)) continue;
+    for (const f of fs.readdirSync(d)) {
+      if (!/\.bat$/i.test(f)) continue;
+      const p = path.join(d, f);
+      try {
+        if (!fs.statSync(p).isFile()) continue;
+        const s = fs.readFileSync(p, 'utf8');
+        const crlf = s.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+        if (crlf !== s) { fs.writeFileSync(p, crlf, 'utf8'); fixed++; }
+      } catch (e) { /* 忽略单个文件 */ }
+    }
+  }
+  if (fixed) log('· 已把 ' + fixed + ' 个 .bat 修正为 CRLF 换行');
+})();
+
 const STAGE = path.join(BUILD, '_staging');
 tryClean(STAGE);
 fs.mkdirSync(STAGE, { recursive: true });
