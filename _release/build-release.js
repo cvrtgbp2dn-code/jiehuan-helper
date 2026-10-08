@@ -34,6 +34,46 @@ function copyDir(src, dst) {
   }
 }
 
+/* ---------- 找可用的 Python ----------
+   注意：不能直接用裸命令 `python`。在 Windows 上，PATH 里第一个 python
+   往往是 Microsoft Store 的占位程序（WindowsApps\python.exe），
+   双击运行时会弹商店或直接失败，导致 zip 打包和上传都报错。
+   这里逐个试，取第一个能真正跑起来的。 */
+function findPython() {
+  const cands = [
+    process.env.PYTHON,                                   // 手动指定优先
+    'C:\\Users\\ipai\\.workbuddy\\binaries\\python\\versions\\3.13.12\\python.exe',
+    'C:\\Users\\ipai\\.workbuddy\\binaries\\python\\envs\\default\\Scripts\\python.exe',
+    'python',
+    'python3',
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python313', 'python.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
+    'C:\\Python313\\python.exe',
+    'C:\\Python312\\python.exe',
+    'C:\\Python311\\python.exe',
+  ].filter(Boolean);
+  for (const c of cands) {
+    try {
+      // 排除 Store 占位程序：真实 python 能在 stdout 输出以 "Python " 开头的内容
+      const out = execFileSync(c, ['-c', 'import sys;print("Python "+sys.version.split()[0])'],
+        { stdio: ['ignore', 'pipe', 'ignore'], timeout: 15000 }).toString().trim();
+      if (/^Python \d/.test(out)) {
+        // 再确认能用标准库 zipfile（打包依赖它）
+        execFileSync(c, ['-c', 'import zipfile'], { stdio: 'ignore', timeout: 15000 });
+        log('· 使用 Python：' + (c === 'python' || c === 'python3' ? c + '（来自 PATH）' : c));
+        return c;
+      }
+    } catch (e) { /* 试下一个 */ }
+  }
+  return null;
+}
+const PYTHON = findPython();
+if (!PYTHON) {
+  die('找不到可用的 Python。\n' +
+      '  打包和上传都需要 Python（用于生成 zip、调用 publish.py）。\n' +
+      '  请安装 Python 3（安装时勾选 Add to PATH），或设置环境变量 PYTHON 指向 python.exe。');
+}
+
 // ---------- 读取配置 ----------
 const cfgPath = path.join(__dirname, 'config.json');
 const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
@@ -121,14 +161,17 @@ fs.writeFileSync(path.join(ROOT, 'version.json'), JSON.stringify(versionJson, nu
 log('✓ 版本文件 _release/out/version.json（并已同步到项目根目录 version.json）');
 
 // ---------- 4. 产出完整安装包 ----------
+// 注意：这一步失败必须**中断整个发布**。否则会静默跳过 zip，导致：
+//   ① 新同事下载不到完整包   ② 永久链接指向的附件是旧的
+// 之前因为只打一行警告就继续，出现过「看起来发布成功、实际没有 zip」的情况。
 const zipOut = path.join(OUT, zipName);
-let zipped = false;
 try {
   zipDir(APPDIR, zipOut);
   log('✓ 完整安装包 _release/out/' + zipName + '（' + (fs.statSync(zipOut).size / 1024 / 1024).toFixed(1) + ' MB）');
-  zipped = true;
 } catch (e) {
-  log('! 完整安装包生成失败（可忽略，增量更新不需要它）：' + e.message);
+  die('完整安装包生成失败，已停止发布（避免上线一个不完整的版本）。\n' +
+      '  原因：' + e.message + '\n' +
+      '  处理：完全退出「结账助手」（包括右下角托盘图标）后重新运行 发布.bat。');
 }
 
 // ---------- 5. 自动发布到 GitHub ----------
@@ -138,10 +181,13 @@ let published = false;
 if (canPublish) {
   log('\n────────── 自动发布到 GitHub ──────────');
   try {
-    execFileSync('python', [path.join(__dirname, 'publish.py')], { stdio: 'inherit' });
+    execFileSync(PYTHON, [path.join(__dirname, 'publish.py')], { stdio: 'inherit' });
     published = true;
   } catch (e) {
-    log('! 自动发布失败，可稍后手动重试：python _release/publish.py');
+    log('');
+    log('! 自动发布失败：' + e.message);
+    log('  产物已在 _release/out/，可手动重试：');
+    log('    "' + PYTHON + '" "' + path.join(__dirname, 'publish.py') + '"');
   }
 }
 
@@ -152,7 +198,7 @@ if (!published) {
   log('2) Tag 填 ' + tag + '，标题也填 ' + tag);
   log('3) 上传这两个文件（拖拽即可）：');
   log('     _release/out/app.asar');
-  if (zipped) log('     _release/out/' + zipName);
+  log('     _release/out/' + zipName);
   log('4) 点 Publish release');
   log('5) 把项目根目录的 version.json 覆盖到仓库根目录的 version.json 并提交');
   log('');
@@ -166,7 +212,7 @@ log('');
 
 // ---------- 工具：目录打包成 zip ----------
 function zipDir(dir, outFile) {
-  // 优先用 python（生成标准 zip，路径用正斜杠，兼容性最好），失败再退回 PowerShell
+  // 用已找到的 Python 生成标准 zip（路径用正斜杠，兼容性最好）
   const py = `
 import zipfile, os, sys
 root, out = sys.argv[1], sys.argv[2]
@@ -178,12 +224,19 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
             p = os.path.join(dp, f)
             z.write(p, os.path.relpath(p, base))
 `;
+  let lastErr = null;
   try {
-    execFileSync('python', ['-c', py, dir, outFile], { stdio: 'ignore' });
+    execFileSync(PYTHON, ['-c', py, dir, outFile], { stdio: 'ignore' });
     if (fs.existsSync(outFile)) return;
-  } catch (e) { /* 退回 PowerShell */ }
-  execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-    'Compress-Archive -Path "' + dir + '" -DestinationPath "' + outFile + '" -CompressionLevel Optimal -Force'],
-    { stdio: 'ignore' });
-  if (!fs.existsSync(outFile)) throw new Error('两种打包方式都失败');
+  } catch (e) { lastErr = e; }
+  // 兜底：PowerShell（生成的 zip 反斜杠路径，兼容性略差，但好过没有）
+  try {
+    execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+      'Compress-Archive -Path "' + dir + '" -DestinationPath "' + outFile + '" -CompressionLevel Optimal -Force'],
+      { stdio: 'ignore' });
+  } catch (e) { lastErr = e; }
+  if (!fs.existsSync(outFile)) {
+    throw new Error('打包 zip 失败：' + ((lastErr && lastErr.message) || '未知原因') +
+      '（常见原因：软件正在运行，目录被占用；请完全退出结账助手后重试）');
+  }
 }
