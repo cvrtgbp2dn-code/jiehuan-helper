@@ -7,8 +7,8 @@ const DEFAULT_ACCEL = 'Alt+Z';
 // 更新源：依次尝试多个地址，第一个成功的就用（国内 jsDelivr 快，国外 raw 直连快）。
 // 改成你自己的 GitHub 用户名/仓库名即可；也可以在软件目录放一个 update-config.json
 // （{"feed":"https://..."} 或 {"feed":["url1","url2"]}）覆盖，无需重新打包。
-const OWNER = 'OWNER';
-const REPO = 'REPO';
+const OWNER = 'cvrtgbp2dn-code';
+const REPO = 'jiehuan-helper';
 const BRANCH = 'main';
 const FEED_DEFAULT = [
   'https://cdn.jsdelivr.net/gh/' + OWNER + '/' + REPO + '@' + BRANCH + '/version.json',
