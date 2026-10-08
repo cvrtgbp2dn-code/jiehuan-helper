@@ -1,7 +1,8 @@
 {
-  "version": "5.3.0",
+  "version": "5.4.0",
   "date": "2026-10-08",
-  "notes": "- 新增表格行拖拽排序，按住任意一行即可上下拖动\n- 已结清的行默认不勾选、全选自动跳过，仍可手动勾选\n- 结清按钮严格跟随勾选，勾几笔结几笔，0 笔时置灰\n- 新增「检查更新」：自动检查新版本，以后不用再传整个压缩包\n- 界面上的长说明统一移入帮助中心，软件内只留简短操作提示",
-  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.3.0/app.asar",
-  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.3.0/checkout-helper-5.3.0-win32-x64.zip"
+  "notes": "- 新增「复制下载链接」：设置 → 安装包，一键复制永久有效的下载链接\n- 这条链接永远指向最新版，转发给新同事即可，不用再传 160MB 压缩包\n- 更新弹窗里的「下载完整安装包」也改走这条永久链接",
+  "asar": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.4.0/app.asar",
+  "full": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/download/v5.4.0/checkout-helper-win32-x64.zip",
+  "download": "https://github.com/cvrtgbp2dn-code/jiehuan-helper/releases/latest/download/checkout-helper-win32-x64.zip"
 }
