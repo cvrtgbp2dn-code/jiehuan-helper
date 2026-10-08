@@ -160,6 +160,25 @@ def main():
         else:
             print(" ✗ %s" % r)
 
+    # ---------- 2b. 补一份「固定文件名」的附件 ----------
+    # /releases/latest/download/<固定名> 才能成为永久直达链接，所以 zip 要以固定名再传一份
+    fixed = "checkout-helper-win32-x64.zip"
+    src_zip = None
+    for p in assets:
+        if p.endswith(".zip") and os.path.exists(p) and os.path.basename(p) != fixed:
+            src_zip = p
+            break
+    if src_zip:
+        print("== 2b. 上传固定文件名附件（永久链接用）==")
+        for a in call("GET", "%s/repos/%s/%s/releases/%s/assets" % (API, OWNER, REPO, rel["id"])) or []:
+            if isinstance(a, dict) and a.get("name") == fixed:
+                print("   · 删除旧附件:", fixed)
+                call("DELETE", "%s/repos/%s/%s/releases/assets/%s" % (API, OWNER, REPO, a["id"]))
+        print("   ↑ %s（%.1f MB）..." % (fixed, os.path.getsize(src_zip) / 1024 / 1024), end="", flush=True)
+        r = call("POST", "%s?name=%s" % (upload_url, urllib.parse.quote(fixed)),
+                 raw=open(src_zip, "rb").read(), ctype="application/octet-stream")
+        print(" ✓" if "id" in r else " ✗ %s" % r)
+
     # ---------- 3. 更新仓库文件 ----------
     print("== 3. 更新仓库文件 ==")
     ok = True
@@ -185,6 +204,7 @@ def main():
 
     print("\n✅ 发布完成")
     print("   下载页: %s" % rel_html)
+    print("   永久直达链接: https://github.com/%s/%s/releases/latest/download/checkout-helper-win32-x64.zip" % (OWNER, REPO))
     print("   版本源: https://api.github.com/repos/%s/%s/contents/version.json" % (OWNER, REPO))
     return ok
 
