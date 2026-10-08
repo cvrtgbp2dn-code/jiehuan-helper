@@ -4,16 +4,19 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const DEFAULT_ACCEL = 'Alt+Z';
-// 更新源：依次尝试多个地址，第一个成功的就用（国内 jsDelivr 快，国外 raw 直连快）。
+// 更新源：依次尝试多个地址，第一个成功的就用。
+// ① GitHub API —— 最快、内容最新（公开仓库无需 token，且不受 CDN 缓存影响）
+// ② jsDelivr   —— 国内可访问的 CDN（有缓存，兜底用）
+// ③ raw        —— GitHub 原生（海外快，国内可能不通）
 // 改成你自己的 GitHub 用户名/仓库名即可；也可以在软件目录放一个 update-config.json
 // （{"feed":"https://..."} 或 {"feed":["url1","url2"]}）覆盖，无需重新打包。
 const OWNER = 'cvrtgbp2dn-code';
 const REPO = 'jiehuan-helper';
 const BRANCH = 'main';
 const FEED_DEFAULT = [
+  'https://api.github.com/repos/' + OWNER + '/' + REPO + '/contents/version.json',
   'https://cdn.jsdelivr.net/gh/' + OWNER + '/' + REPO + '@' + BRANCH + '/version.json',
-  'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + BRANCH + '/version.json',
-  'https://github.com/' + OWNER + '/' + REPO + '/raw/' + BRANCH + '/version.json'
+  'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + BRANCH + '/version.json'
 ];
 const userDataDir = app.getPath('userData');
 const hotkeyFile = path.join(userDataDir, 'hotkey.json');
@@ -170,40 +173,62 @@ function cmpVer(a, b) {
 function parseAsarHeader(buf) {
   if (!buf || buf.length < 4096) return null;
   try {
+    // asar 头部：4 个 32 位长度字段（@0=4、@4=头部总长、@8=含填充的 JSON 长、@12=JSON 实际长度），
+    // JSON 从偏移 16 开始；数据区起点 = 16 + align4(JSON 实际长度)
+    const jsonReal = buf.readUInt32LE(12);
     const jsonSize = buf.readUInt32LE(4);
-    if (!(jsonSize > 16 && jsonSize < 4 * 1024 * 1024)) return null;
-    if (16 + jsonSize > buf.length) return null;
-    const s = buf.slice(16, 16 + jsonSize).toString('utf8');
-    const cut = s.lastIndexOf('}');          // 末尾可能有 4 字节对齐填充
+    if (!(jsonReal > 16 && jsonReal < 4 * 1024 * 1024)) return null;
+    if (!(jsonSize >= jsonReal) || 16 + jsonSize > buf.length) return null;
+    const s = buf.slice(16, 16 + jsonReal).toString('utf8');
+    const cut = s.lastIndexOf('}');          // JSON 末尾可能紧跟对齐填充
     if (cut < 0) return null;
     const j = JSON.parse(s.slice(0, cut + 1));
     if (!j || !j.files || !j.files['index.html'] || !j.files['main.js']) return null;   // 确认是本软件的包
-    return { json: j, jsonSize: jsonSize };
+    const pad = (4 - (jsonReal % 4)) % 4;
+    return { json: j, dataStart: 16 + jsonReal + pad };
   } catch (e) { return null; }
 }
 function isValidAsar(buf) {
   const h = parseAsarHeader(buf);
   if (!h) return false;
-  // 按头部声明的 offset/size 推算正文长度，校验文件是否完整（防下载被截断）
-  let end = 0;
+  // 按数据区起点 + 各文件 size 之和，精确推算文件总长（防下载被截断 / 多出杂字节）
+  let sum = 0;
   (function walk(node) {
     if (!node) return;
     if (node.files) {
       const ks = Object.keys(node.files);
       for (let i = 0; i < ks.length; i++) walk(node.files[ks[i]]);
     }
-    if (!node.unpacked && typeof node.offset === 'string' && typeof node.size === 'number') {
-      const o = (parseInt(node.offset, 10) || 0) + node.size;
-      if (o > end) end = o;
-    }
+    if (!node.unpacked && typeof node.size === 'number' && node.size >= 0) sum += node.size;
   })(h.json);
-  if (end <= 0) return false;
-  return Math.abs(buf.length - (16 + h.jsonSize + end)) <= 16;
+  if (sum <= 0) return false;
+  return buf.length === h.dataStart + sum;
+}
+function parseFeedBody(txt) {
+  let o = null;
+  try { o = JSON.parse(txt); } catch (e) { return null; }
+  if (!o) return null;
+  // GitHub API 的 contents 响应：{content:"<base64>", encoding:"base64", ...}（没有 version 字段）
+  if (typeof o.content === 'string' && o.version === undefined) {
+    try {
+      const s = (o.encoding === 'base64')
+        ? Buffer.from(o.content.replace(/\s/g, ''), 'base64').toString('utf8')
+        : o.content;
+      return JSON.parse(s);
+    } catch (e) { return null; }
+  }
+  // 普通 version.json 原文（jsDelivr / raw 返回）
+  return o;
 }
 async function httpGet(url) {
   const tryFetch = net && net.fetch ? net.fetch.bind(net) : (typeof fetch === 'function' ? fetch : null);
   if (!tryFetch) throw new Error('当前环境不支持网络请求');
-  return tryFetch(url, { cache: 'no-store' });
+  // 加时间戳绕过中间层可能存在的缓存
+  const u = url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+  return tryFetch(u, {
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json, text/plain, */*' }
+  });
 }
 ipcMain.handle('app-version', () => curVersion());
 ipcMain.handle('open-external', (_e, url) => {
@@ -219,8 +244,9 @@ ipcMain.handle('check-update', async () => {
       const res = await httpGet(urls[i]);
       if (!res.ok) { lastStatus = res.status; continue; }
       const txt = await res.text();
-      let info;
-      try { info = JSON.parse(txt); } catch (e) { lastErr = '返回内容不是合法的 JSON'; continue; }
+      let info = null;
+      try { info = parseFeedBody(txt); } catch (e) { info = null; }
+      if (!info) { lastErr = '返回内容无法解析'; continue; }
       const latest = String((info && info.version) || '');
       if (!/^\d+(\.\d+)*$/.test(latest)) { lastErr = '版本号格式不正确'; continue; }
       const cur = curVersion();
