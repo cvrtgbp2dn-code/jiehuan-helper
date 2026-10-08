@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>结账助手 · 帮助中心</title>
+<script>
+// 主题：优先听 URL 参数（被软件内嵌时与主界面同步），单独打开时跟随系统
+(function(){
+  var m = location.search.match(/theme=(dark|light)/);
+  var t = m ? m[1] : ((window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --soft:#fafbfc; --text:#1f2328; --muted:#8b929c;
+  --line:#e8eaed; --accent:#2563eb; --accent-soft:#eff6ff; --ok:#059669; --warn:#b45309;
+  color-scheme:light;
+}
+html[data-theme=dark]{
+  --bg:#15171c; --card:#1d2026; --soft:#242830; --text:#e8eaee; --muted:#9aa2ad;
+  --line:#333941; --accent:#5b9dff; --accent-soft:#233248; --ok:#3ecf8e; --warn:#e5b567;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.7;
+  padding:32px 16px;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto}
+header{margin-bottom:18px}
+h1{font-size:20px;font-weight:600;letter-spacing:.5px;margin-bottom:8px}
+.intro{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.card h3{font-size:13.5px;font-weight:600;margin:14px 0 6px;color:var(--text)}
+.card p,.card li{font-size:13px;color:var(--muted)}
+.card ul,.card ol{padding-left:20px}
+.card li{margin:4px 0}
+.card b{color:var(--text);font-weight:600}
+.card code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:12px;color:var(--text);word-break:break-all}
+.steps{counter-reset:s;display:flex;gap:10px;flex-wrap:wrap}
+.steps div{flex:1;min-width:180px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.steps div::before{counter-increment:s;content:counter(s);display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;align-items:center;justify-content:center;margin-right:8px;vertical-align:middle}
+.steps b{display:block;color:var(--text);margin-bottom:4px;font-size:13.5px}
+.tip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>结账助手 · 帮助中心</h1>
+  <p class="intro">一个离线的项目记账工具：记单数与错单，自动算有效单数、人民币与美元，按归属人结清、一键导出 Excel。数据只存在你自己这台电脑，不联网、不上传，同事之间互不同步。</p>
+</header>
+
+<div class="card">
+  <h2>快速开始</h2>
+  <div class="steps">
+    <div><b>记一笔</b>归属人（选填）+ 项目名 + 单数 / 错单，回车即记；预览行实时显示有效单数与金额</div>
+    <div><b>批量导入</b>粘贴群邀请消息 / 拖入 txt、Excel / 粘贴截图 OCR，都先出预览表核对再确认</div>
+    <div><b>汇总与导出</b>勾选项目看汇总（只算未结清），一键导出 Excel；筛选某人后只导某人</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>功能指引</h2>
+
+  <h3>录入与编辑</h3>
+  <ul>
+    <li><b>双击单元格</b>原地编辑项目名 / 归属人 / 单数 / 错单，编辑时表格不位移；回车确认、Esc 取消</li>
+    <li>同名项目（同归属人）重复录入会先询问是否覆盖；错单大于单数会被拦下</li>
+  </ul>
+
+  <h3>拖动排序</h3>
+  <ul>
+    <li><b>按住表格任意一行上下拖动</b>即可调整顺序，蓝线显示插入位置；松手后立即生效</li>
+    <li>拖动后会自动切换成<b>手动排序</b>，表头上方出现「恢复默认排序」，点一下即回到「最新在前」</li>
+    <li>手动排序下新记的账仍在最上面；筛选某人时拖动，只影响该范围内的先后，其他人不受影响</li>
+    <li>注意：整行可拖，因此<b>不能用鼠标拖选表格里的文字</b>（双击编辑照常可用）</li>
+  </ul>
+
+  <h3>归属人与筛选</h3>
+  <ul>
+    <li>归属人输入框下拉<b>只列有记录的归属人</b>；侧栏按归属人筛选，「全部项目」在首行</li>
+    <li>列表按<b>最新记录在首行</b>排序（日期倒序，同一天按录入先后）</li>
+  </ul>
+
+  <h3>结清与汇总</h3>
+  <ul>
+    <li>汇总只算<b>未结清</b>；已结清行灰显，点状态列圆圈可恢复未结</li>
+    <li>筛选某个归属人后，汇总条右侧出现绿色<b>「结清」按钮</b>：<b>勾选几笔就显示几笔、只结清这几笔</b>；没勾选时显示「结清 0 笔」并置灰不可点</li>
+    <li>想一次结清该人全部未结账：先点列表左上角<b>「全选」</b>（会自动跳过已结清的行），再点结清</li>
+  </ul>
+
+  <h3>勾选规则</h3>
+  <ul>
+    <li>已结清的账<b>默认不勾选</b>，点「全选」也会<b>自动跳过</b>已结清的行</li>
+    <li>仍可<b>手动勾选</b>已结清的行（会提示「该行已结清，不计入汇总」）；单独导出已结清单据时就靠它</li>
+    <li>标记结清时会自动取消该行勾选，避免残留</li>
+  </ul>
+
+  <h3>清空与撤销</h3>
+  <ul>
+    <li>清空后 <b>6 秒内</b>可点提示条「撤销」恢复；过期不可恢复，<b>建议先导出 Excel 留底再清空</b></li>
+    <li>清空会连同归属人历史名单、归属人输入框一起清空，不留残留</li>
+  </ul>
+
+  <h3>群邀请消息识别规则（导入）</h3>
+  <div class="tip">一条邀请消息 = 一个项目，直接整段粘贴即可，可一次粘多条。</div>
+  <ul>
+    <li><b>项目名</b>：取消息里第一个【】的内容（自动跳过「快手App」）</li>
+    <li><b>单数</b>：取「人数」行的数字</li>
+    <li><b>错单</b>：人数行以下各行末尾数字之和（如「日本1」「小孩4」→ 错单 5）；这些行会记为错单明细，鼠标悬停错单单元格可查看</li>
+    <li>口令码、广告行自动忽略</li>
+    <li>也支持普通格式：每行「项目名 单数 错单数」，空格 / Tab / 逗号分隔；只写项目名则单数记 0，导入后再改</li>
+    <li>与已有项目（同归属人）同名时导入即覆盖旧单数，预览表会标黄色「重复」提醒</li>
+  </ul>
+
+  <h3>单价与汇率（设置）</h3>
+  <ul>
+    <li>「每单单价 ¥」决定有效单数换算成人民币的金额；「汇率 1 美元 =」决定美元金额（人民币 ÷ 汇率）</li>
+    <li>改动<b>只影响此后新记录</b>，已记的账沿用记账当时的单价与汇率，不会被追溯改写</li>
+    <li>想改历史某一笔的金额：双击该行的单数 / 错单重新编辑即可（金额按该笔单价重算）</li>
+  </ul>
+
+  <h3>主题 / 字号 / 快捷键 / 托盘</h3>
+  <ul>
+    <li>主题：亮色 / 暗色 / 跟随系统。「跟随系统」= 按 Windows 的浅色/深色设置自动切换，系统改主题时本软件实时跟随</li>
+    <li>字号：小 / 中 / 大，整体等比缩放（等同浏览器缩放，不会打乱表格列对齐）</li>
+    <li>全局快捷键默认 <code>Alt+Z</code>：在任意软件里唤起本窗口，再按一次收进托盘。点设置里的快捷键按钮，<b>直接按下新组合键</b>即可改，按键过程实时回显；与别的软件冲突会自动提醒并保留原键。点「恢复默认」可还原为 <code>Alt+Z</code></li>
+    <li>点关闭（X）会询问「最小化到托盘 / 退出应用」，可勾选记住选择；托盘图标单击即唤回窗口，右键可退出</li>
+  </ul>
+
+  <h3>拖动排序 / 勾选规则在哪里看</h3>
+  <div class="tip">软件界面上只保留简短操作提示（例如表头上方的「按住行可拖动排序」），<b>具体规则与说明都集中在本帮助中心</b>，见上文「拖动排序」「结清与汇总」「勾选规则」小节。</div>
+
+  <h3>软件更新</h3>
+  <div class="tip">软件会<b>自动检查新版本并在有更新时主动弹窗提示</b>（只读取一个版本号，<b>不上传任何账目数据</b>）。也可以随时手动检查：设置 → 版本 → 「检查更新」。</div>
+  <ul>
+    <li><b>什么时候会自动检查？</b>启动软件后 4 秒检查一次；之后每 6 小时一次；把软件从托盘唤回、或切回本窗口时也会检查（30 分钟内不会重复联网，很省流量）</li>
+    <li>发现新版本会主动弹窗，显示版本号与更新内容，点<b>「立即更新」</b>自动下载并重启生效</li>
+    <li>点「稍后」则本次使用期间不再自动弹窗提醒该版本（下次打开软件仍会提醒；想立刻更新随时可到设置里手动检查）</li>
+    <li>网络不通或检查失败会<b>静默忽略</b>，不会打断正常记账</li>
+    <li>日常更新只下载约 110KB 的增量包（界面与逻辑部分），<b>不需要重新传整个软件包</b></li>
+    <li>下载失败或想手动安装：点弹窗里的「下载完整安装包」，用系统浏览器打开下载页</li>
+    <li>更新只替换程序文件，<b>账目数据存在 AppData 里，不受影响</b>；若提示「安装目录不可写」，把软件移到桌面或文档目录再更新</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>常见问题</h2>
+  <ul>
+    <li><b>数据存在哪里？</b>在 <code>C:\Users\&lt;你的用户名&gt;\AppData\Roaming\结账助手</code>，不在软件文件夹里。移动、改名、删除软件文件夹都不影响账目</li>
+    <li><b>清空的数据能找回吗？</b>只有 6 秒内「撤销」一条路，过期不可恢复</li>
+    <li><b>已结清的钱去哪了？</b>只是不再计入汇总，列表里仍在（灰显），导出 Excel 也包含，随时可恢复未结</li>
+    <li><b>快捷键没反应？</b>大概率被其他软件占用：设置时注册失败会提示并保留原键，启动时被占用也会弹提示；到 设置 → 快捷键 重设</li>
+    <li><b>截图识别（OCR）不工作？</b>不要移动或删除 <code>resources\app.asar.unpacked</code> 目录，识别引擎放在那里</li>
+    <li><b>界面空白或报错？</b>请运行 <code>结账助手-win32-x64</code> 目录里的 <code>结账助手.exe</code>，不要单独把 index.html 拖出来打开</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>版本记录</h2>
+  <ul>
+    <li><b>v5.3</b>（2026-10）：新增表格行拖拽排序（整行可拖、拖动后转手动排序、可一键恢复默认）；已结清行默认不勾选、全选自动跳过、仍可手动勾选；结清按钮严格跟随勾选（勾几笔结几笔，0 笔置灰）；新增「检查更新」（自动检查新版本、下载增量包并重启生效）；<b>界面上的长说明统一移入本帮助中心，软件内只保留简短操作提示</b></li>
+    <li><b>v5.2</b>（2026-10）：截图 OCR 优化（图像放大预处理、表格模式识别、表格列智能解析）；汇总卡片与表格对齐；侧栏表头通栏；快捷键默认 <code>Alt+Z</code>；清空按钮改实色红</li>
+    <li><b>v5.1</b>（2026-10）：修复文件残渣；结清按钮移至汇总条右侧改绿色；侧栏改版（全部项目置顶、筛选标题与表头对齐）；列表最新在前；编辑零位移、日期不折行；主题亮/暗/跟随系统；字号小/中/大；全局快捷键与托盘、自定义关闭弹窗；下拉只显示有记录的归属人；清空连带清理历史名单与输入框</li>
+    <li><b>v5.0</b>：归属人体系、侧栏筛选、一键结清、截图 OCR 导入</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>联系与支持</h2>
+  <ul>
+    <li>联系：<b>Telegram @ctllnn</b></li>
+    <li>问题反馈：<b>Telegram @Jzido</b></li>
+  </ul>
+  <div class="tip">本工具为团队内部使用：账目数据只存在每人自己电脑，互相不同步、不上传；新同事拿到安装包打开是空白账本，各记各的。使用中有疑问或建议，联系以上任一 Telegram 账号。</div>
+</div>
+
+<footer>结账助手 · 离线运行 · 数据仅存本机</footer>
+</div>
+</body>
+</html>

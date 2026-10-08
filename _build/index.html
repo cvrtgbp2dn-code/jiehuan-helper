@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html data-page-node-id="wwIv4WIylRgs0iYWRkSJxl" lang="zh-CN">
+<head data-page-node-id="rSOLsrZDoGonILUPzHAdi9">
+<script data-page-node-id="9mfudaeKIW2nbXsaEfcOn0" src="/page/page_comm/inject.js"></script>
+<script src="lib/xlsx.full.min.js"></script>
+<script src="lib/tesseract.min.js"></script>
+<meta data-page-node-id="1ycsU7Sw9mnug8cYaxiDvF" charset="UTF-8">
+<meta data-page-node-id="At5liNADK4s2XV6yK8oXCk" content="width=device-width, initial-scale=1" name="viewport">
+<title data-page-node-id="AsCFQ6S7oZaC0n96Ea3pfg" data-pnid-children="ew5Wmf2MCpjk6x4k1QOTxf">结账助手</title>
+<style data-page-node-id="WFURU4TQxEbFocjKaeSzOI" data-pnid-children="1uCJydsQ8P6XlLkbE5X8Ln">
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --soft:#fafbfc; --text:#1f2328; --muted:#8b929c;
+  --line:#e8eaed; --accent:#2563eb; --accent-soft:#eff6ff; --ok:#059669; --danger:#dc2626;
+  --na:#c3c7ce; --warn-bg:#fef3c7; --warn-fg:#b45309; --settle-bg:#059669; --settle-fg:#ffffff; --settle-bd:#059669;
+  --toast-bg:#1f2328; --toast-fg:#ffffff; --toast-act:#93c5fd; --shadow:0 2px 12px rgba(0,0,0,.06);
+  color-scheme:light;
+}
+/* 暗色主题：JS 把解析结果（light/dark）写到 html[data-theme]，auto=跟随系统 */
+html[data-theme=dark]{
+  --bg:#15171c; --card:#1d2026; --soft:#242830; --text:#e8eaee; --muted:#9aa2ad;
+  --line:#333941; --accent:#5b9dff; --accent-soft:#233248; --ok:#3ecf8e; --danger:#f07070;
+  --na:#565d68; --warn-bg:#4d3d10; --warn-fg:#e5b567; --settle-bg:#1e4b3a; --settle-fg:#7be0b2; --settle-bd:#2e7457;
+  --toast-bg:#e8eaee; --toast-fg:#1d2026; --toast-act:#2563eb; --shadow:0 2px 12px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+/* 字号三档：整体等比缩放（等同浏览器缩放，不破坏列宽对齐） */
+html[data-font=s]{zoom:.92}
+html[data-font=l]{zoom:1.12}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+  padding:24px 16px; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px;margin:0 auto}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:18px;font-weight:600;letter-spacing:.5px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar input[type=number]{width:66px;padding:4px 7px;font-size:13px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:14px;overflow:hidden}
+
+button{
+  font-family:inherit;font-size:13px;padding:6px 12px;border-radius:6px;
+  border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;transition:.15s;
+}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{opacity:.88;color:#fff}
+button.sm{padding:3px 9px;font-size:12px}
+button.link{border:none;background:none;color:var(--muted);padding:4px 6px}
+button.link:hover{color:var(--danger);text-decoration:underline}
+/* 一键结清（汇总条右侧，绿色 = 收讫语义） */
+button.settle{background:var(--settle-bg);border-color:var(--settle-bd);color:var(--settle-fg);padding:8px 16px;border-radius:7px}
+button.settle:hover{opacity:.88;color:var(--settle-fg);border-color:var(--settle-bd)}
+button.settle:disabled{opacity:.4;cursor:not-allowed;background:var(--na);border-color:var(--na);color:#fff}
+button.settle:disabled:hover{opacity:.4}
+input[type=text],input[type=number]{
+  font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:7px;background:var(--card);color:var(--text);outline:none;width:100%;
+}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+::placeholder{color:var(--na);opacity:1}
+input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+
+/* 设置（默认收起） */
+.settings{display:none;padding:14px 16px;font-size:12px;color:var(--muted)}
+.settings.open{display:block}
+.setrow{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap}
+.setrow .grp{display:flex;align-items:center;gap:6px}
+.setrow .grp input{width:82px}
+.setrow label{font-size:12px;color:var(--muted)}
+.setnote{color:var(--muted);font-size:12px}
+.segbtns{display:inline-flex;gap:6px}
+.segbtns button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.entry{padding:16px;display:grid;grid-template-columns:1.2fr 1.6fr 1fr 1fr auto;gap:10px;align-items:end}
+.entry label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
+.entry label .req{color:var(--danger)}
+.preview{padding:0 16px 14px;display:flex;gap:18px;align-items:center;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.preview b{color:var(--text);font-size:15px;margin-left:5px;font-variant-numeric:tabular-nums}
+.preview .big{color:var(--accent);font-size:17px;font-weight:600}
+.preview .na{color:var(--na)}
+
+.listhead{
+  padding:10px 16px;border-bottom:1px solid var(--line);display:flex;
+  justify-content:space-between;align-items:center;background:var(--soft);font-size:12px;color:var(--muted);
+}
+.listhead label{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--text);font-size:13px}
+
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);font-size:13px}
+th{color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap;background:var(--card)}
+th.l,td.l{text-align:left}
+th.c,td.c{text-align:center;width:38px}
+tbody tr:hover{background:var(--soft)}
+tbody tr.on{background:var(--accent-soft)}
+tbody td{font-weight:400;font-size:13px}
+td.l{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.person{color:var(--muted);font-size:13px;padding-left:24px;width:1%;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+td.date{white-space:nowrap}
+tr.done td{opacity:.45}
+/* 行拖拽排序：整行可拖（放弃文本拖选），拖动时半透明 + 插入位置蓝线 */
+tbody tr{cursor:grab;-webkit-user-select:none;user-select:none}
+tbody tr:active{cursor:grabbing}
+tbody tr.dragging{opacity:.35}
+tbody tr.drop-above td{box-shadow:inset 0 2px 0 var(--accent)}
+tbody tr.drop-below td{box-shadow:inset 0 -2px 0 var(--accent)}
+/* 编辑框绝对定位铺满单元格：双击进入/退出编辑都不引起任何重排 */
+td input.cellEdit{
+  position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;margin:0;
+  padding:0 10px;font-size:13px;border-radius:0;border:1px solid var(--accent);
+  background:var(--card);color:var(--text);
+}
+td input.cellEdit:focus{box-shadow:none}
+td input.cellEdit[type=number]::-webkit-outer-spin-button,
+td input.cellEdit[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+td input.cellEdit[type=number]{-moz-appearance:textfield;appearance:textfield}
+.stoggle{border:none;background:none;cursor:pointer;font-size:15px;color:var(--na);padding:0 2px;line-height:1}
+.stoggle:hover{color:var(--ok)}
+.stoggle.done{color:var(--ok);font-weight:700}
+td.noteable{text-decoration:underline dotted;text-underline-offset:3px}
+
+/* 左侧归属人筛选卡片：与右侧表格同高（表格行多时卡片向下延伸对齐） */
+.listwrap{display:flex;gap:14px;align-items:stretch}
+.sidecard{width:150px;flex:none;padding:0 0 12px;margin-bottom:14px;display:flex;flex-direction:column}
+#sideList{flex:1;min-height:0;overflow-y:auto}
+.sideitem{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:0 8px;padding:9px 10px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--text)}
+.sideitem:hover{background:var(--soft)}
+/* 首行「全部项目」通栏填满（卡片横向留白改由各条目 margin 提供，表头自然顶满，不产生横向滚动条），与右侧列表头行对齐 */
+.sideitem.head{margin:0;padding:10px 18px;border-radius:0;background:var(--soft);border-bottom:1px solid var(--line)}
+.sidecap{margin:0;padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);background:var(--card);border-bottom:1px solid var(--line)}
+.sideitem.on{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.sideitem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sideitem .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.sideitem.done{color:var(--muted)}
+.sideitem.done .nm::after{content:" ✓";color:var(--ok)}
+td.eff{color:var(--ok);font-weight:600}
+td.usd{color:var(--accent);font-weight:600}
+.editable{cursor:grab}
+.editable:hover{background:var(--accent-soft)}
+.empty{text-align:center;color:var(--muted);padding:34px;font-size:13px}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;vertical-align:middle}
+
+.summary{
+  position:sticky;bottom:0;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:14px 18px;display:flex;gap:28px;align-items:center;
+  flex-wrap:wrap;box-shadow:var(--shadow);
+  margin-left:164px;   /* 右移与上方表格列对齐（侧栏 150 + 间距 14） */
+}
+.summary .block{display:flex;flex-direction:column;gap:2px}
+.summary .k{font-size:12.5px;color:var(--muted)}
+.summary .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.summary .v.hl{color:var(--accent)}
+.summary .v.ok{color:var(--ok)}
+.summary .none{color:var(--muted);font-size:13px}
+
+#toast{
+  position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(16px);
+  background:var(--toast-bg);color:var(--toast-fg);padding:10px 16px;border-radius:8px;font-size:13px;
+  display:flex;gap:14px;align-items:center;opacity:0;pointer-events:none;transition:.2s;z-index:99;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#toast button{background:none;border:none;color:var(--toast-act);padding:0;font-size:13px}
+#toast button:hover{opacity:.8;color:var(--toast-act);text-decoration:underline}
+@media (max-width:640px){
+  .entry{grid-template-columns:1fr 1fr}
+  .summary{gap:18px;margin-left:0}
+}
+
+/* 归属人下拉（只列有记录的归属人） */
+#personDrop{position:absolute;top:100%;left:0;right:0;z-index:30;margin-top:4px;max-height:220px;overflow-y:auto;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.12);display:none}
+#personDrop.open{display:block}
+#personDrop .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+#personDrop .row:hover{background:var(--accent-soft)}
+#personDrop .row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#personDrop .none{padding:10px 12px;font-size:12px;color:var(--muted)}
+
+/* ============ 导入弹窗 ============ */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:50;align-items:flex-start;justify-content:center;padding:36px 14px;overflow-y:auto}
+.mask.open{display:flex}
+.modal{background:var(--card);border-radius:12px;width:100%;max-width:760px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden}
+.mhead{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid var(--line)}
+.mhead b{font-size:15px}
+.mhead .x{border:none;background:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px 8px}
+.mhead .x:hover{color:var(--danger)}
+.mtabs{display:flex;gap:6px;padding:12px 18px 0}
+.mtabs button{border-radius:6px 6px 0 0;border-bottom:none}
+.mtabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mpanel{display:none;padding:14px 18px;border-top:1px solid var(--line)}
+.mpanel.on{display:block}
+.mpanel textarea{width:100%;min-height:160px;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;resize:vertical;outline:none;background:var(--soft);color:var(--text)}
+.mpanel textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mtip{font-size:12px;color:var(--muted);margin:8px 0;line-height:1.7}
+.mtip code{background:var(--soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:12px}
+.dropzone{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s}
+.dropzone:hover,.dropzone.hl{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.dropzone img{max-width:100%;max-height:180px;margin-top:10px;border-radius:6px;border:1px solid var(--line)}
+.ocrbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px;display:none}
+.ocrbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.ocrstat{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+/* 预览表 */
+.pvwrap{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
+.pvwrap table{font-size:13px}
+.pvwrap th{position:sticky;top:0;z-index:1}
+.pvwrap input{border:1px solid transparent;background:transparent;font-family:inherit;font-size:13px;padding:4px 6px;border-radius:5px;width:100%;outline:none}
+.pvwrap input:hover{border-color:var(--line)}
+.pvwrap input:focus{border-color:var(--accent);background:var(--card)}
+.pvwrap input.num{text-align:right;width:70px}
+.pvwrap tr.dup td:first-child::after{content:"重复";font-size:11px;color:var(--warn-fg);background:var(--warn-bg);border-radius:4px;padding:1px 5px;margin-left:6px}
+.mfoot{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.mfoot .cnt{font-size:12px;color:var(--muted)}
+/* 关闭窗口自定义询问框：屏幕正中弹出 */
+#closeMask{align-items:center}
+#closeMask .modal{max-width:430px}
+.closebody{padding:16px 18px 4px;font-size:13px;color:var(--muted);line-height:1.8}
+.closemem{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--text);cursor:pointer}
+#closeMask .mfoot{border-top:none;padding-top:8px}
+/* 帮助中心弹窗：iframe 原样内嵌 help.html 网页原版，主题经 URL 参数同步 */
+#helpMask .modal{max-width:860px;overflow:hidden;position:relative}
+#helpMask .helpx{position:absolute;top:10px;right:12px;z-index:2;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:18px;line-height:1;padding:2px 8px;border-radius:6px}
+#helpMask .helpx:hover{color:var(--danger);border-color:var(--danger)}
+/* 软件更新弹窗 */
+#updMask{align-items:center}
+#updMask .modal{max-width:470px}
+#updBody{padding:16px 18px;font-size:13px;color:var(--muted);line-height:1.9}
+#updBody b{color:var(--text)}
+#updBody .verline{color:var(--text);font-size:15px;font-weight:600;margin-bottom:6px}
+#updBody .notes{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-top:10px;white-space:pre-wrap}
+#updBody .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+#updBody .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#updMask .mfoot{gap:8px;justify-content:flex-end}
+.setver{font-size:12px;color:var(--muted);margin-left:6px;font-variant-numeric:tabular-nums}
+#helpFrame{display:block;width:100%;height:84vh;border:none;background:var(--bg)}
+/* 破坏性操作按钮（清空）：实色红，与导入的实色蓝同款，红/蓝形成 删/加 语义对照 */
+button.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+button.danger:hover{opacity:.88;color:#fff;border-color:var(--danger)}
+</style>
+</head>
+<body data-page-node-id="XW3Gc7FEny75OydVcoXs75">
+<div data-page-node-id="Yv2kzSmAkhK6wXpMGZIhXg" class="wrap">
+
+  <header data-page-node-id="UIYxXhwOnKXcoymh0PFnY7">
+    <h1 data-page-node-id="aQ6KCOHx1yNmG5tJzajhXp"><!--pnid:AGOvdcdsKEeVECSlTJ30YJ-->结账助手</h1>
+    <div data-page-node-id="u5kUvKDu5qLpmJ0UVGBpB8" class="toolbar">
+      <button data-page-node-id="ekBPILUbdV7Xu71XYU1Bl1" class="sm" onclick="toggleSet()"><!--pnid:mD04QDrub22MrAbLv5k3iY-->设置</button>
+      <button class="sm primary" onclick="openImport()">导入</button>
+      <button data-page-node-id="XQr4H7mxyo0fvLajKwCGfW" class="sm" onclick="exportExcel()"><!--pnid:v5qzBg3foKIYYroqqMRdcP-->导出 Excel</button>
+      <button data-page-node-id="fsjsZUamAol71KZxQGlFjG" class="sm danger" onclick="clearAll()"><!--pnid:EFYpWKWkp62A1WeUdyVD9o-->清空</button>
+    </div>
+  </header>
+
+  <!--pnid:DX209zEHqa8LmgKYWubuTf--><!-- 单价 / 汇率：默认收起 -->
+  <div data-page-node-id="qIQWJTkKKzqnvIBrEVwBC9" class="card settings" id="setPanel">
+    <div data-page-node-id="mx4LMNuge4xMmDaAmwsSMo" class="setrow">
+      <div data-page-node-id="64InQuETHWVCx8w03LtaSO" class="grp"><label data-page-node-id="R8FglUANWDUWwEzjG2acyk"><!--pnid:9TJRIVL8nZ6arptOKIizRK-->每单单价 ¥</label><input data-page-node-id="dRxcNzHsy4AXmYkOcnHj8S" id="setPrice" min="0" step="0.5" type="number"></div>
+      <div data-page-node-id="DtihL0z2ImRV1xlDVYEntA" class="grp"><label data-page-node-id="JdPYFXEjvaXjtrxaJfwa6k"><!--pnid:2AB2qC79Fp1Amtc2p1O9h9-->汇率 1 美元 =</label><input data-page-node-id="4fHfMNZPi9ewrTjvTPq5eh" id="setRate" min="0" step="0.1" type="number"></div>
+      <span data-page-node-id="PEGCPBSwNgAlkuj72yAws8" class="setnote"><!--pnid:eGtsY3M6MX849QpXfSVcqf-->仅影响此后新记录</span>
+    </div>
+    <div class="setrow" style="margin-top:12px">
+      <div class="grp"><label>主题</label>
+        <span class="segbtns">
+          <button type="button" class="sm" data-theme-pick="light">亮色</button>
+          <button type="button" class="sm" data-theme-pick="dark">暗色</button>
+          <button type="button" class="sm" data-theme-pick="auto">跟随系统</button>
+        </span>
+      </div>
+      <div class="grp"><label>字号</label>
+        <span class="segbtns">
+          <button type="button" class="sm" data-font-pick="s">小</button>
+          <button type="button" class="sm" data-font-pick="m">中</button>
+          <button type="button" class="sm" data-font-pick="l">大</button>
+        </span>
+      </div>
+      <div class="grp"><label>快捷键</label>
+        <span class="segbtns">
+          <button type="button" class="sm" id="hotkeyBtn">Alt+Z</button>
+          <button type="button" class="sm" id="hotkeyReset">恢复默认</button>
+        </span>
+      </div>
+      <div class="grp"><label>版本</label>
+        <span class="segbtns">
+          <button type="button" class="sm" id="updCheckBtn">检查更新</button>
+          <span class="setver" id="verLabel">v—</span>
+        </span>
+      </div>
+      <div class="grp">
+        <span class="segbtns"><button type="button" class="sm" onclick="openHelp()">帮助中心</button></span>
+      </div>
+    </div>
+  </div>
+
+  <div data-page-node-id="7UCzsJ8erszIRG1bgQ6QMU" class="card" style="overflow:visible">
+    <form data-page-node-id="JEuqVtoqhVfXGOPfR2EWlv" autocomplete="off" id="entryForm">
+      <div data-page-node-id="GPtVZolzKXBzZHJC5tNlwW" class="entry">
+        <div style="position:relative"><label>归属人</label>
+          <input id="inPerson" placeholder="（选填）" type="text" autocomplete="off">
+          <div id="personDrop"></div>
+        </div>
+        <div data-page-node-id="MjEqttf5bbA2lLbu9UPkUb"><label data-page-node-id="zqtOopg2lfcBwhWkUkPyai"><!--pnid:PF9ALRPwT96LurUqeHXNXE-->项目名</label><input data-page-node-id="dakKkuLHOM51SGt96nV0lV" id="inProject" placeholder="（项目名）" required type="text"></div>
+        <div data-page-node-id="65JTUfWlu3FzL3Ivj6CDl8"><label data-page-node-id="bw88XiqGHX2clFyxD0AX0h"><!--pnid:snpNvZtHnRzu7i12VAe79R-->单数</label><input data-page-node-id="HP2qyxfFsvZdRIVR1pZTco" id="inCount" min="0" placeholder="0" step="1" type="number"></div>
+        <div data-page-node-id="4qlE3CP8uKRjUp7aNC7cZD"><label data-page-node-id="KKG1g3rtJ1cf2gzfnVpB3Q"><!--pnid:ZFo65LG7NH6jnIEktemA3G-->错单</label><input data-page-node-id="VAxC1XJ5SHjQbhWSWxmuQ5" id="inBad" min="0" placeholder="0" step="1" type="number"></div>
+        <div data-page-node-id="rYnN67TfjS6G3n9Na2U5gb"><button data-page-node-id="Pv8o2AUC0e1DWbFhtky0K0" class="primary" type="submit"><!--pnid:WSkufqzQfp2hxX6WFNCJc5-->记录</button></div>
+      </div>
+      <div data-page-node-id="ePuYSPcxAZFS0IH8ZFHs18" class="preview">
+        <span data-page-node-id="uuElKt1WoyZXU6O03FYOtQ"><!--pnid:brwXyVvBOosgPiRDkOw8PX-->有效<b data-page-node-id="CVkSXlrPKpyYNb8np8IL9I" id="pvEff"><!--pnid:pTCIUM2wi81yO82lefEOao-->—</b></span>
+        <span data-page-node-id="pEmCPN2c79woICtlxx8FQM"><!--pnid:fGGyi7hVjm7PNuJekmnbAn-->人民币<b data-page-node-id="FwJYvHUQ2pBOrhaPJoLVdn" id="pvCny"><!--pnid:dmLEcNHSp7UcVyjDxRbtLe-->—</b></span>
+        <span data-page-node-id="qs3c0TFkzhG67070LTE2yW" class="big"><!--pnid:PCH7EvvjjsZXcFVLq85i4M-->$<span data-page-node-id="oqpoAfYMZhMi8U7Ah5cvKw" id="pvUsd"><!--pnid:PKS3ghGXIOGf3nzZl2g02w-->—</span></span>
+        <span data-page-node-id="vGfDfmLQwt9NYR0O6nxnzI" style="flex:1"></span>
+        <span data-page-node-id="SZfak1d3yihEvt5DwFFbgT" style="font-size:12px"><!--pnid:usWnQjWs7SQiEcB8YAoDCw-->按 回车 快速记录</span>
+      </div>
+    </form>
+  </div>
+
+  <div class="listwrap">
+  <div class="card sidecard">
+    <div id="sideList"></div>
+  </div>
+  <div data-page-node-id="hUaTRL6lderhvVIzXMUx1i" class="card" style="flex:1;min-width:0">
+    <div data-page-node-id="fpE6y2iQo7BntgYfwYcOZb" class="listhead">
+      <label data-page-node-id="IRp22cMlXIu97I2S7txG5e"><input data-page-node-id="3pH2eN6O9FfmPeIU0Dpgza" id="checkAll" type="checkbox"> 全选</label>
+      <span style="font-size:12.5px;color:var(--muted);margin-left:12px;flex:1">按住行可拖动排序 · 双击单元格可编辑<a href="javascript:;" id="sortReset" style="margin-left:10px;color:var(--accent);text-decoration:none;display:none">恢复默认排序</a></span>
+      <span data-page-node-id="KvWiqbr0IYEPMwnGxj52yE" id="listInfo"></span>
+    </div>
+    <table data-page-node-id="4thRQS2Bu89TbHJSqF28q6">
+      <thead data-page-node-id="KObXLuiQtTHgvxiQgxqGBe">
+        <tr data-page-node-id="2wlOSqpRm4Gl4K6Rl1lAOn">
+          <th data-page-node-id="8TTImfAN2m2Je6oVx00nfo" class="c"></th>
+          <th data-page-node-id="8dQUDDKr7npnjMNCCyOj7c" class="l"><!--pnid:s5UllDQ05Vl2lh3QZ78Ota-->项目名</th>
+          <th class="l">归属人</th>
+          <th>日期</th>
+          <th data-page-node-id="3fdpTEdn07qQSnmtQkFmqs"><!--pnid:SsdD8yH2sloKRwD3NJpgFv-->单数</th>
+          <th data-page-node-id="xI1vTmtj3KYdPovpa9L0uP"><!--pnid:qaOPRz9Fb4QGWShy33wh3L-->错单</th>
+          <th data-page-node-id="2mYMS3Aktp7Nuu3UWlBt6G"><!--pnid:reRJx5VDW8mlBBwEOujuRm-->有效</th>
+          <th data-page-node-id="rWfVEjLpYrdwWu21MyDU0d"><!--pnid:o7gItQ1ttiRmYwrqY9opSn-->人民币</th>
+          <th data-page-node-id="2NCcXkKIBkXgo2uQ4UDXLo"><!--pnid:8Jy7ZK5rGXmF7XcuyMzvZO-->美元</th>
+          <th class="c">状态</th>
+          <th data-page-node-id="Cwzkkoaj5myf9FDaRkWTYZ" class="c"></th>
+        </tr>
+      </thead>
+      <tbody data-page-node-id="dPmlRR9qz2yqdIy5R7cuR3" id="tbody"></tbody>
+    </table>
+    <div data-page-node-id="GH3hQDbWyBMyH48WHcaxCp" class="empty" id="emptyTip"><!--pnid:vSAImJOoa09r8WdXf9A0fR-->还没有记录，手动录入第一笔，或点右上角「导入」批量导入</div>
+  </div>
+  </div>
+
+  <div data-page-node-id="e8a5FHejE1cGwpZ6pWJqhL" class="summary" id="summary"></div>
+</div>
+
+<!-- ============ 导入弹窗 ============ -->
+<div class="mask" id="impMask">
+  <div class="modal">
+    <div class="mhead"><b>导入项目</b><button class="x" onclick="closeImport()">×</button></div>
+    <div class="mtabs">
+      <button class="sm on" data-tab="text" onclick="impTab('text')">粘贴文本</button>
+      <button class="sm" data-tab="file" onclick="impTab('file')">文件（txt / Excel）</button>
+      <button class="sm" data-tab="ocr" onclick="impTab('ocr')">截图识别</button>
+    </div>
+
+    <div class="mpanel on" id="imp-text">
+      <textarea id="impText" placeholder="直接粘贴快手群邀请消息（可一次粘多条）：&#10;我和1个人正在快手群聊【长发及腰的群聊1】里聊天，复制此消息##...##，打开【快手App】即可加群。&#10;人数36&#10;日本1&#10;小孩4&#10;→ 自动识别成 1 个项目：长发及腰的群聊1，单数36，错单5&#10;&#10;也支持普通格式，每行一条：项目名 单数（可再跟一个错单数）"></textarea>
+      <div class="mtip">群邀请消息：项目名取第一个【】，单数取「人数」行的数字，错单 = 人数下面所有行的数字之和；口令码、广告行自动忽略。<br>普通格式：空格 / Tab / 逗号分隔；只有项目名也可以，单数先记 0，导入后再改。</div>
+      <button class="primary sm" onclick="parseTextImport()">解析文本</button>
+    </div>
+
+    <div class="mpanel" id="imp-file">
+      <div class="dropzone" id="fileDrop" onclick="document.getElementById('impFile').click()">
+        点击选择文件，或把文件拖到这里<br>
+        <span style="font-size:12px">支持 .txt / .csv / .xlsx / .xls（表格取第1列作项目名，第2列文字作归属人，其后数字作单数、错单）</span>
+      </div>
+      <input type="file" id="impFile" accept=".txt,.csv,.tsv,.xlsx,.xls" style="display:none">
+      <div class="mtip" style="margin-top:12px">没有现成文件？先下载模板填好再导入：<br>
+        <button class="sm" onclick="dlTplTxt()">下载 TXT 模板</button>
+        <button class="sm" onclick="dlTplXlsx()" style="margin-left:8px">下载 Excel 模板</button>
+      </div>
+    </div>
+
+    <div class="mpanel" id="imp-ocr">
+      <div class="dropzone" id="ocrDrop" tabindex="0">
+        <b>点这里，然后 Ctrl+V 粘贴截图</b>（或拖入图片）<br>
+        <span style="font-size:12px">截图越清晰越准，识别后会先给你预览确认</span>
+        <div id="ocrPrev"></div>
+      </div>
+      <div class="ocrbar" id="ocrBar"><i id="ocrBarIn"></i></div>
+      <div class="ocrstat" id="ocrStat"></div>
+      <input type="file" id="ocrFile" accept="image/*" style="display:none">
+    </div>
+
+    <div class="pvwrap" id="impPvWrap" style="display:none;margin:0 18px">
+      <table>
+        <thead><tr><th class="l">项目名</th><th>单数</th><th>错单</th><th class="c"></th></tr></thead>
+        <tbody id="impPvBody"></tbody>
+      </table>
+    </div>
+
+    <div class="mfoot">
+      <span class="cnt" id="impCnt"></span>
+      <span>
+        <button class="sm" onclick="closeImport()">取消</button>
+        <button class="sm primary" id="impOk" style="display:none;margin-left:8px" onclick="confirmImport()">确认导入</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 关闭窗口询问（自定义弹窗） ============ -->
+<div class="mask" id="closeMask">
+  <div class="modal">
+    <div class="mhead"><b>关闭窗口</b></div>
+    <div class="closebody">
+      关闭窗口时您希望执行什么操作？最小化到托盘后程序仍在后台运行，可用全局快捷键或右下角托盘图标唤回；退出应用将完全结束程序。
+      <label class="closemem"><input type="checkbox" id="closeRemember"> 记住我的选择</label>
+    </div>
+    <div class="mfoot">
+      <span style="flex:1"></span>
+      <button class="sm" id="closeQuit">退出应用</button>
+      <button class="sm primary" id="closeTray" style="margin-left:8px">最小化到托盘</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 帮助中心（iframe 内嵌 help.html 原版网页） ============ -->
+<div class="mask" id="helpMask">
+  <div class="modal">
+    <button class="x helpx" onclick="closeHelp()" title="关闭">×</button>
+    <iframe id="helpFrame" src="help.html"></iframe>
+  </div>
+</div>
+
+<!-- ============ 软件更新 ============ -->
+<div class="mask" id="updMask">
+  <div class="modal">
+    <div class="mhead"><b>软件更新</b><button class="x" onclick="closeUpd()">×</button></div>
+    <div id="updBody"></div>
+    <div class="bar" id="updBar"><i id="updBarIn"></i></div>
+    <div class="mfoot">
+      <button class="sm" id="updFull">下载完整安装包</button>
+      <button class="sm" id="updLater">稍后</button>
+      <button class="sm primary" id="updGo">立即更新</button>
+    </div>
+  </div>
+</div>
+
+<div data-page-node-id="YXyBAVrkht30zu6eeYdJon" id="toast"><span data-page-node-id="40MfyF2IPj8gqt7z0oHR3b" id="toastMsg"></span><span data-page-node-id="kqalkevR1EyDs7yWoIkFyG" id="toastAct"></span></div>
+
+<script data-page-node-id="RTx3qfJ68jkxpVWN3U8HSi" data-pnid-children="bS28H31UdK8TCDNofRtP4j">
+var KEY = 'jiehuan_zhushou_v1';
+var LEGACY = ['jiri_jiesuan_v1','daily_settlement_v1'];   // 旧版本数据自动继承
+var S = load();
+
+function load(){
+  var keys = [KEY].concat(LEGACY);
+  for(var i=0;i<keys.length;i++){
+    try{
+      var raw = localStorage.getItem(keys[i]);
+      if(raw){
+        var o = JSON.parse(raw);
+        if(o && o.records){
+          // 兼容旧版的 settings 嵌套结构
+          if(o.settings){ o.price=o.settings.price; o.rate=o.settings.rate; delete o.settings; }
+          o.sel = o.sel || {};
+          o.persons = o.persons || [];        // 归属人历史名单
+          o.person  = o.person  || '';        // 当前归属人
+          o.filter  = o.filter  || '__ALL__'; // 列表筛选
+          o.sortMode = (o.sortMode==='manual') ? 'manual' : 'auto';   // auto=按日期最新在前 / manual=手动拖拽顺序
+          o.theme   = o.theme   || 'auto';    // 主题：light / dark / auto(跟随系统)
+          o.font    = o.font    || 'm';       // 字号：s / m / l
+          return o;
+        }
+      }
+    }catch(e){}
+  }
+  return { price:5, rate:6.8, records:[], sel:{}, persons:[], person:'', filter:'__ALL__', sortMode:'auto', theme:'auto', font:'m' };
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ toast('保存失败'); }
+}
+function todayStr(){
+  var d=new Date(); return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+}
+function todayISO(){
+  var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function curPerson(){
+  return (document.getElementById('inPerson') ? document.getElementById('inPerson').value : '').trim();
+}
+function addPersonHist(name){
+  if(!name) return;
+  var i = S.persons.indexOf(name);
+  if(i>=0) S.persons.splice(i,1);
+  S.persons.unshift(name);
+  if(S.persons.length>20) S.persons.length = 20;
+}
+function allPersons(){
+  // 只列当前记录里真实存在的归属人；无记录的历史残留不再出现
+  var set = {}, out = [];
+  S.records.forEach(function(r){ var p=(r.person||'').trim(); if(p && !set[p]){ set[p]=1; out.push(p); } });
+  return out;
+}
+function filteredRecords(){
+  var base;
+  if(S.filter==='__ALL__') base = S.records.slice();
+  else if(S.filter==='__NONE__') base = S.records.filter(function(r){ return !(r.person||'').trim(); });
+  else base = S.records.filter(function(r){ return (r.person||'').trim()===S.filter; });
+  // 最新记录排在首行：日期倒序，同一天按录入先后倒序；手动排序模式下按 ord
+  var idx = {};
+  S.records.forEach(function(r,i){ idx[r.id] = i; });
+  if(S.sortMode==='manual'){
+    base.sort(function(a,b){
+      var d = (+a.ord||0) - (+b.ord||0);
+      return d!==0 ? d : (idx[a.id] - idx[b.id]);
+    });
+  }else{
+    base.sort(function(a,b){
+      var d = String(b.date||'').localeCompare(String(a.date||''));
+      return d!==0 ? d : (idx[b.id] - idx[a.id]);
+    });
+  }
+  return base;
+}
+function pad(n){ return n<10?'0'+n:''+n; }
+function r2(n){ return Math.round((+n + Number.EPSILON)*100)/100; }
+function fmt(n){ return r2(n).toFixed(2); }
+function calc(r){
+  var eff = (+r.count||0) - (+r.bad||0);
+  var cny = r2(eff * (+r.price||0));
+  var usd = (+r.rate>0) ? r2(cny / (+r.rate)) : 0;
+  return { eff:eff, cny:cny, usd:usd };
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function recById(id){
+  for(var i=0;i<S.records.length;i++) if(S.records[i].id===id) return S.records[i];
+  return null;
+}
+/* ---- 手动排序：ord 越小越靠上 ---- */
+function snapshotOrder(){
+  // 把「当前默认排序（日期倒序 + 录入倒序）」固化成 ord，作为手动排序的起点
+  var idx = {};
+  S.records.forEach(function(r,i){ idx[r.id]=i; });
+  S.records.slice().sort(function(a,b){
+    var d = String(b.date||'').localeCompare(String(a.date||''));
+    return d!==0 ? d : (idx[b.id]-idx[a.id]);
+  }).forEach(function(r,i){ r.ord = i*10; });
+}
+function newOrd(){
+  // 新记录排在最上面（与「最新在前」的习惯一致）
+  var mn = null;
+  S.records.forEach(function(r){ if(typeof r.ord==='number'){ if(mn===null || r.ord<mn) mn = r.ord; } });
+  return (mn===null ? 0 : mn - 10);
+}
+function ensureOrd(){
+  for(var i=0;i<S.records.length;i++) if(typeof S.records[i].ord!=='number'){ snapshotOrder(); return; }
+}
+function moveRecord(dragId, targetId, before){
+  if(!dragId || !targetId || dragId===targetId) return false;
+  var ids = S.records.slice().sort(function(a,b){ return (+a.ord||0)-(+b.ord||0); })
+                     .map(function(r){ return r.id; });
+  var from = ids.indexOf(dragId); if(from<0) return false;
+  ids.splice(from,1);
+  var ti = ids.indexOf(targetId); if(ti<0) return false;
+  ids.splice(before ? ti : ti+1, 0, dragId);
+  ids.forEach(function(id,i){ var r = recById(id); if(r) r.ord = i*10; });
+  return true;
+}
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============ 设置面板 ============ */
+function toggleSet(){
+  document.getElementById('setPanel').classList.toggle('open');
+}
+
+/* ============ 主题（亮色 / 暗色 / 跟随系统） ============ */
+var mqDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function resolvedTheme(){
+  if(S.theme==='dark') return 'dark';
+  if(S.theme==='light') return 'light';
+  return (mqDark && mqDark.matches) ? 'dark' : 'light';   // auto
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', resolvedTheme());
+  var btns = document.querySelectorAll('button[data-theme-pick]');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-theme-pick')===S.theme);
+}
+function applyFont(){
+  document.documentElement.setAttribute('data-font', (S.font==='s'||S.font==='l') ? S.font : 'm');
+  var btns = document.querySelectorAll('button[data-font-pick]');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-font-pick')===S.font);
+}
+if(mqDark){
+  var onSysTheme = function(){ if(S.theme==='auto') applyTheme(); };   // 系统切换深浅色时实时跟随
+  if(mqDark.addEventListener) mqDark.addEventListener('change', onSysTheme);
+  else if(mqDark.addListener) mqDark.addListener(onSysTheme);
+}
+document.getElementById('setPanel').addEventListener('click', function(e){
+  var t = e.target.closest('button[data-theme-pick]');
+  if(t){ S.theme = t.getAttribute('data-theme-pick'); save(); applyTheme(); return; }
+  var f = e.target.closest('button[data-font-pick]');
+  if(f){ S.font = f.getAttribute('data-font-pick'); save(); applyFont(); }
+});
+
+/* ============ 全局快捷键（任意软件里唤起窗口；可改、被占用时提醒） ============ */
+var hotkeyCapturing = false;
+function accelFromEvent(e){
+  var mods = [];
+  if(e.ctrlKey) mods.push('Ctrl');
+  if(e.altKey) mods.push('Alt');
+  if(e.shiftKey) mods.push('Shift');
+  if(e.metaKey) mods.push('Super');
+  var k = e.key, key = '';
+  if(/^[a-zA-Z]$/.test(k)) key = k.toUpperCase();
+  else if(/^[0-9]$/.test(k)) key = k;
+  else if(/^F\d{1,2}$/.test(k)) key = k.toUpperCase();
+  else if(k===' ') key='Space';
+  else if(k==='Escape') key='Esc';
+  else if(k==='ArrowLeft') key='Left';
+  else if(k==='ArrowRight') key='Right';
+  else if(k==='ArrowUp') key='Up';
+  else if(k==='ArrowDown') key='Down';
+  else if(k==='Enter') key='Enter';
+  else if(k==='Backspace') key='Backspace';
+  else if(k==='Delete') key='Delete';
+  else if(k==='Home') key='Home';
+  else if(k==='End') key='End';
+  else if(k==='PageUp') key='PageUp';
+  else if(k==='PageDown') key='PageDown';
+  else if(k==='Tab') key='Tab';
+  else if(k==='+'||k==='=') key='Plus';
+  else if(',.;:/-'.indexOf(k)>=0) key=k;
+  if(!key || !mods.length) return null;   // 必须带修饰键，避免劫持单键
+  return mods.join('+')+'+'+key;
+}
+function refreshHotkeyBtn(){
+  var b = document.getElementById('hotkeyBtn');
+  if(hotkeyCapturing){ b.textContent='按新快捷键（Esc 取消）'; return; }
+  if(!window.bridge){ b.textContent='仅打包版'; b.disabled=true; return; }
+  window.bridge.getHotkey().then(function(a){ b.textContent=a; });   // 常态显示当前组合（含默认 Alt+Z）
+}
+document.getElementById('hotkeyBtn').addEventListener('click', function(){
+  if(!window.bridge){ toast('快捷键只在打包的 exe 版本里生效'); return; }
+  hotkeyCapturing = true; refreshHotkeyBtn();
+});
+document.getElementById('hotkeyReset').addEventListener('click', function(){
+  if(!window.bridge) return;
+  hotkeyCapturing = false;
+  window.bridge.setHotkey('Alt+Z').then(function(res){
+    toast(res.ok ? '已恢复默认快捷键 Alt+Z' : ('恢复失败：Alt+Z 被占用，当前仍为 '+res.accel));
+    refreshHotkeyBtn();
+  });
+});
+document.addEventListener('keydown', function(e){
+  if(!hotkeyCapturing) return;
+  e.preventDefault(); e.stopPropagation();
+  if(e.key==='Escape'){ hotkeyCapturing=false; refreshHotkeyBtn(); toast('已取消'); return; }
+  var b = document.getElementById('hotkeyBtn');
+  if(['Control','Alt','Shift','Meta'].indexOf(e.key)>=0){
+    // 按住修饰键时实时回显已输入的部分组合
+    var m=[];
+    if(e.ctrlKey) m.push('Ctrl');
+    if(e.altKey) m.push('Alt');
+    if(e.shiftKey) m.push('Shift');
+    if(e.metaKey) m.push('Super');
+    b.textContent = m.length ? (m.join('+')+'+…') : '按新快捷键（Esc 取消）';
+    return;
+  }
+  var accel = accelFromEvent(e);
+  if(!accel){ toast('请带上修饰键：Ctrl / Alt / Shift'); return; }
+  b.textContent = accel;   // 先回显完整组合，再落库
+  hotkeyCapturing = false;
+  window.bridge.setHotkey(accel).then(function(res){
+    if(res.ok) toast('快捷键已设为 '+res.accel+'，在任意软件里可唤起本窗口');
+    else toast('注册失败：'+accel+' 与其他程序或系统冲突，已保留 '+res.accel);
+    refreshHotkeyBtn();
+  });
+}, true);
+if(window.bridge && window.bridge.onHotkeyError){
+  window.bridge.onHotkeyError(function(acc){
+    toast('启动时快捷键 '+acc+' 注册失败（被其他程序占用），请到设置里重设');
+  });
+}
+
+/* ============ 帮助中心 ============ */
+function openHelp(){
+  document.getElementById('helpFrame').src = 'help.html?theme=' + resolvedTheme();   // 内嵌网页原版，主题与主界面同步
+  document.getElementById('helpMask').classList.add('open');
+}
+function closeHelp(){ document.getElementById('helpMask').classList.remove('open'); }
+document.getElementById('helpMask').addEventListener('click', function(e){ if(e.target===this) closeHelp(); });
+
+/* ============ 软件更新（从 GitHub 拉版本号 → 下载 app.asar → 重启替换） ============ */
+var updInfo = null, updStep = 'idle', updAutoSeen = '';
+function closeUpd(){
+  document.getElementById('updMask').classList.remove('open');
+  if(updInfo && updInfo.latest) updAutoSeen = updInfo.latest;   // 点了「稍后」：本次运行内不再自动弹同一版本（手动检查仍可看到）
+}
+function updBody(html){ document.getElementById('updBody').innerHTML = html; }
+function updBarShow(pct){
+  var bar = document.getElementById('updBar');
+  if(pct===null){ bar.style.display='none'; return; }
+  bar.style.display='block';
+  document.getElementById('updBarIn').style.width = Math.round(pct*100)+'%';
+}
+function updButtons(o){
+  document.getElementById('updGo').style.display   = o.go   ? '' : 'none';
+  document.getElementById('updFull').style.display = o.full ? '' : 'none';
+  document.getElementById('updLater').textContent = o.later || '稍后';
+  document.getElementById('updGo').disabled = false;
+}
+document.getElementById('updMask').addEventListener('click', function(e){ if(e.target===this) closeUpd(); });
+document.getElementById('updLater').addEventListener('click', closeUpd);
+document.getElementById('updFull').addEventListener('click', function(){
+  if(updInfo && updInfo.full && window.bridge && window.bridge.openExternal) window.bridge.openExternal(updInfo.full);
+});
+document.getElementById('updGo').addEventListener('click', function(){
+  if(!updInfo) return;
+  if(updStep==='ready'){
+    updButtons({go:false, full:false, later:''});
+    updBody('<div class="verline">正在重启完成更新…</div>窗口将在几秒内自动关闭并重新打开。');
+    if(window.bridge && window.bridge.applyUpdate) window.bridge.applyUpdate();
+    return;
+  }
+  if(!updInfo.asar) return;
+  updStep = 'downloading';
+  document.getElementById('updGo').disabled = true;
+  updBody('<div class="verline">正在下载更新…</div>请勿关闭窗口，下载完成后即可重启生效。');
+  updBarShow(0.15);
+  window.bridge.downloadUpdate(updInfo.asar).then(function(r){
+    if(!r || !r.ok){
+      updStep = 'idle';
+      updBarShow(null);
+      updBody('<div class="verline">更新下载失败</div>'+(esc((r && r.message) || '网络错误'))+
+        '<div class="notes">可以点「下载完整安装包」手动更新，或稍后重试。</div>');
+      updButtons({go:false, full:!!updInfo.full, later:'关闭'});
+      return;
+    }
+    updStep = 'ready';
+    updBarShow(1);
+    updBody('<div class="verline">更新已下载完成</div>点「立即重启」完成更新（约 3 秒），重启后账目数据不受影响。');
+    updButtons({go:true, full:false, later:'稍后'});
+    document.getElementById('updGo').textContent = '立即重启';
+  }).catch(function(){
+    updStep = 'idle'; updBarShow(null);
+    updBody('<div class="verline">更新下载失败</div>请稍后重试，或点「下载完整安装包」手动更新。');
+    updButtons({go:false, full:!!(updInfo && updInfo.full), later:'关闭'});
+  });
+});
+function checkUpdate(manual){
+  var btn = document.getElementById('updCheckBtn');
+  if(!window.bridge || !window.bridge.checkUpdate){ if(manual) toast('当前环境不支持检查更新'); return; }
+  if(!manual && (updStep==='downloading' || updStep==='ready')) return;   // 正在更新时不重复检查
+  if(manual){ btn.disabled = true; btn.textContent = '检查中…'; }
+  var done = function(){ if(manual){ btn.disabled = false; btn.textContent = '检查更新'; } };
+  window.bridge.checkUpdate().then(function(res){
+    done();
+    if(!res || !res.ok){
+      if(!manual) return;                        // 启动时静默检查，失败不打扰
+      if(res && res.reason==='unconfigured'){ toast('尚未配置更新源'); return; }
+      if(res && res.reason==='network'){ toast('网络不可用，检查更新失败'); return; }
+      toast('检查更新失败'+(res && res.status ? ('（HTTP '+res.status+'）') : ''));
+      return;
+    }
+    if(!res.hasUpdate){ if(manual) toast('已是最新版本 v'+res.current); return; }
+    if(!manual && res.latest === updAutoSeen) return;   // 用户已「稍后」过这个版本，本次运行不再自动打扰
+    updInfo = res; updStep = 'idle';
+    updBody('<div class="verline">发现新版本 v'+esc(res.latest)+'</div>'+
+      '当前版本 v'+esc(res.current)+'，更新后需重启软件生效，账目数据不受影响。'+
+      (res.notes ? '<div class="notes">'+esc(res.notes)+'</div>' : ''));
+    updBarShow(null);
+    document.getElementById('updGo').textContent = '立即更新';
+    updButtons({go:!!res.asar, full:!!res.full, later:'稍后'});
+    document.getElementById('updMask').classList.add('open');
+  }).catch(function(){ done(); if(manual) toast('检查更新失败'); });
+}
+document.getElementById('updCheckBtn').addEventListener('click', function(){ checkUpdate(true); });
+if(window.bridge && window.bridge.getAppVersion){
+  window.bridge.getAppVersion().then(function(v){ if(v) document.getElementById('verLabel').textContent = 'v'+v; });
+}
+/* 自动检查更新：启动后检查一次；此后每 6 小时一次；
+   以及「窗口从托盘唤出 / 重新获得焦点」时检查（最少间隔 30 分钟，避免频繁联网）。
+   只下载一个版本号文件，不上传任何数据；检查失败静默忽略，不打扰使用。 */
+var lastAutoCheck = 0;
+function autoCheckUpdate(force){
+  if(updStep==='downloading' || updStep==='ready') return;      // 正在更新中
+  if(!force && Date.now() - lastAutoCheck < 30*60*1000) return;  // 节流
+  lastAutoCheck = Date.now();
+  checkUpdate(false);
+}
+setTimeout(function(){ autoCheckUpdate(true); }, 4000);              // 启动后 4 秒
+setInterval(function(){ autoCheckUpdate(true); }, 6*60*60*1000);     // 每 6 小时
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) autoCheckUpdate(false); });
+window.addEventListener('focus', function(){ autoCheckUpdate(false); });
+
+/* ============ 关闭窗口询问（自定义弹窗，替代系统对话框） ============ */
+function openCloseMask(){
+  document.getElementById('closeRemember').checked = false;
+  document.getElementById('closeMask').classList.add('open');
+}
+function cancelCloseMask(){
+  document.getElementById('closeMask').classList.remove('open');
+  if(window.bridge) window.bridge.answerClose({choice:'cancel', remember:false});
+}
+function answerClose(choice){
+  var rem = document.getElementById('closeRemember').checked;
+  document.getElementById('closeMask').classList.remove('open');
+  if(window.bridge) window.bridge.answerClose({choice:choice, remember:rem});
+}
+document.getElementById('closeTray').addEventListener('click', function(){ answerClose('tray'); });
+document.getElementById('closeQuit').addEventListener('click', function(){ answerClose('quit'); });
+document.getElementById('closeMask').addEventListener('click', function(e){ if(e.target===this) cancelCloseMask(); });
+if(window.bridge && window.bridge.onCloseAsk) window.bridge.onCloseAsk(openCloseMask);
+
+/* ============ 渲染 ============ */
+function personStats(){
+  var m = {}, order = [];
+  S.records.forEach(function(r){
+    var p = (r.person||'').trim();
+    if(!m[p]){ m[p]={total:0,undone:0}; order.push(p); }
+    m[p].total++;
+    if(!r.done) m[p].undone++;
+  });
+  return { m:m, order:order };
+}
+function renderSidebar(){
+  var st = personStats();
+  if(S.filter!=='__ALL__' && S.filter!=='__NONE__' && !st.m[S.filter]) S.filter = '__ALL__';   // 筛选的人已不存在则回退
+  var html = '';
+  function item(v, label, count, cls){
+    return '<div class="sideitem'+(S.filter===v?' on':'')+(cls?' '+cls:'')+'" data-v="'+esc(v)+'">'+
+      '<span class="nm">'+esc(label)+'</span><span class="n">'+count+'</span></div>';
+  }
+  html += item('__ALL__','全部项目', S.records.length, 'head');
+  html += '<div class="sidecap">归属人筛选</div>';
+  st.order.forEach(function(p){
+    if(!p) return;
+    var s = st.m[p];
+    html += item(p, p, s.total, (s.total>0 && s.undone===0) ? 'done' : '');
+  });
+  var noneS = st.m[''] || {total:0,undone:0};
+  if(noneS.total>0) html += item('__NONE__','无归属', noneS.total, noneS.undone===0?'done':'');
+  document.getElementById('sideList').innerHTML = html;
+}
+document.getElementById('sideList').addEventListener('click', function(e){
+  var it = e.target.closest('.sideitem'); if(!it) return;
+  var v = it.dataset.v;
+  S.filter = v;
+  if(v!=='__ALL__' && v!=='__NONE__'){
+    document.getElementById('inPerson').value = v;
+    S.person = v;
+    addPersonHist(v);
+  }
+  save(); render();
+});
+function render(){
+  renderSidebar();
+  ensureOrd();
+  var tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  var rows = filteredRecords();
+  rows.forEach(function(r){
+    var c = calc(r);
+    var on = !!S.sel[r.id];   // 已结清的行默认不会被自动勾选，手动勾选则如实显示
+    var tr = document.createElement('tr');
+    tr.dataset.id = r.id;
+    tr.draggable = true;                       // 整行可拖动排序
+    if(on) tr.className = 'on';
+    if(r.done) tr.className += (tr.className?' ':'')+'done';
+    tr.innerHTML =
+      '<td class="c"><input type="checkbox" data-sel="'+r.id+'"'+(on?' checked':'')+'></td>'+
+      '<td class="l editable" data-f="project" data-id="'+r.id+'" title="'+esc(r.project)+'">'+esc(r.project)+'</td>'+
+      '<td class="l editable person" data-f="person" data-id="'+r.id+'" title="'+esc(r.person||'')+'">'+esc(r.person||'')+'</td>'+
+      '<td class="date">'+esc(r.date ? r.date.slice(5) : '—')+'</td>'+
+      '<td class="editable" data-f="count" data-id="'+r.id+'">'+r.count+'</td>'+
+      '<td class="editable'+(r.note?' noteable':'')+'" data-f="bad" data-id="'+r.id+'"'+(r.note?' title="错单明细：'+esc(r.note)+'"':'')+'>'+r.bad+'</td>'+
+      '<td class="eff">'+c.eff+'</td>'+
+      '<td>'+fmt(c.cny)+'</td>'+
+      '<td class="usd">'+fmt(c.usd)+'</td>'+
+      '<td class="c"><button class="stoggle'+(r.done?' done':'')+'" data-tog="'+r.id+'" title="'+(r.done?'取消已结':'标记已结')+'">'+(r.done?'✓':'○')+'</button></td>'+
+      '<td class="c"><button class="link" data-del="'+r.id+'">×</button></td>';
+    tb.appendChild(tr);
+  });
+
+  // 全选/计数只针对未结清的行（已结清的行不参与）
+  var und = rows.filter(function(r){ return !r.done; });
+  var n = 0;
+  und.forEach(function(r){ if(S.sel[r.id]) n++; });
+  document.getElementById('emptyTip').style.display = S.records.length ? 'none' : 'block';
+  document.getElementById('listInfo').textContent = S.records.length
+    ? (S.filter==='__ALL__' ? (S.records.length + ' 个项目') : ('筛选出 '+rows.length+' / 共 '+S.records.length+' 个项目'))
+    : '';
+  var ca = document.getElementById('checkAll');
+  ca.checked = und.length>0 && n===und.length;
+  ca.indeterminate = n>0 && n<und.length;
+  document.getElementById('sortReset').style.display = S.sortMode==='manual' ? '' : 'none';
+  renderSummary();
+}
+function countSel(){
+  var n=0; for(var k in S.sel) if(S.sel[k]) n++; return n;
+}
+function renderSummary(){
+  var box = document.getElementById('summary');
+  var all = filteredRecords();
+  var pool = all.filter(function(r){ return !r.done; });   // 汇总只算未结账
+  var picked = pool.filter(function(r){ return S.sel[r.id]; });
+
+  // 结清按钮：严格跟随勾选（勾几笔结几笔），0 笔时置灰不可点
+  var right = '';
+  if(S.filter!=='__ALL__'){
+    var label = S.filter==='__NONE__' ? '无归属' : S.filter;
+    var sn = picked.length;
+    right = '<span style="flex:1"></span>'+
+      '<button type="button" class="settle" id="settleBtn"'+(sn?'':' disabled')+'>结清「'+esc(label)+'」'+sn+' 笔</button>';
+  }
+
+  if(!picked.length){
+    var tip = '勾选左侧项目即可汇总（只算未结账）';
+    if(!pool.length && all.length) tip = '当前范围的账已全部结清 ✓';
+    box.innerHTML = '<span class="none">'+tip+
+      (S.filter!=='__ALL__' ? '（当前只统计「'+esc(S.filter==='__NONE__'?'无归属':S.filter)+'」）' : '')+'</span>'+right;
+  }else{
+    var T={count:0,bad:0,eff:0,cny:0,usd:0};
+    picked.forEach(function(r){
+      var c=calc(r);
+      T.count+=+r.count||0; T.bad+=+r.bad||0; T.eff+=c.eff; T.cny+=c.cny; T.usd+=c.usd;
+    });
+    box.innerHTML =
+      block('已选项目', picked.length+' 项') +
+      block('单数', T.count) +
+      block('错单', T.bad) +
+      block('有效单数', T.eff, 'ok') +
+      block('人民币 ¥', fmt(T.cny), '') +
+      block('美元 $', fmt(T.usd), 'hl') + right;
+  }
+
+  var btn = document.getElementById('settleBtn');
+  if(btn) btn.onclick = function(){
+    var targets = filteredRecords().filter(function(r){ return !r.done && S.sel[r.id]; });
+    if(!targets.length) return;
+    var lb = S.filter==='__NONE__' ? '无归属' : S.filter;
+    if(!confirm('把「'+lb+'」勾选的 '+targets.length+' 笔标记为已结账？\n（汇总将不再计算这些账）')) return;
+    targets.forEach(function(r){ r.done = true; delete S.sel[r.id]; });   // 结清后自动取消勾选
+    save(); render(); toast('已结清「'+lb+'」'+targets.length+' 笔');
+  };
+}
+function block(k,v,cls){
+  return '<div class="block"><span class="k">'+k+'</span><span class="v '+(cls||'')+'">'+v+'</span></div>';
+}
+
+/* ============ 录入 ============ */
+document.getElementById('entryForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var p = document.getElementById('inProject').value.trim();
+  var cRaw = document.getElementById('inCount').value.trim();
+  var bRaw = document.getElementById('inBad').value.trim();
+
+  if(!p){ toast('请填项目名'); document.getElementById('inProject').focus(); return; }
+
+  // 单数/错单留空默认 0，填了项目名就能直接记录
+  var c = cRaw==='' ? 0 : parseInt(cRaw,10);
+  var b = bRaw==='' ? 0 : parseInt(bRaw,10);
+  if(isNaN(c) || c<0){ toast('单数有误'); document.getElementById('inCount').focus(); return; }
+  if(isNaN(b) || b<0){ toast('错单有误'); document.getElementById('inBad').focus(); return; }
+  if(b>c){ toast('错单不能大于单数'); document.getElementById('inBad').focus(); return; }
+
+  var dup=null;
+  for(var i=0;i<S.records.length;i++) if(S.records[i].project===p && (S.records[i].person||'')===curPerson()){ dup=S.records[i]; break; }
+  if(dup && !confirm('已记过「'+p+'」'+(curPerson()?('（'+curPerson()+'）'):'')+'\n原：'+dup.count+' 单 / 错 '+dup.bad+'\n\n「确定」覆盖为 '+c+' 单 / 错 '+b)) return;
+
+  if(dup){ dup.count=c; dup.bad=b; }
+  else{
+    var id = uid();
+    var pn = curPerson();
+    S.records.push({ id:id, project:p, count:c, bad:b, price:+S.price, rate:+S.rate, person:pn, date:todayISO(), note:'', ord:newOrd() });
+    S.sel[id] = true;
+    addPersonHist(pn);
+  }
+  // 修复：筛选视图下录的账若不属于当前筛选，自动切过去，保证可见
+  var pn2 = curPerson();
+  if(pn2){ if(S.filter!=='__ALL__' && S.filter!==pn2) S.filter = pn2; }
+  else if(S.filter!=='__ALL__'){ S.filter = '__ALL__'; }
+  save(); render();
+  toast(dup ? '已覆盖「'+p+'」' : '已记录「'+p+'」');
+
+  document.getElementById('inProject').value='';
+  document.getElementById('inCount').value='';
+  document.getElementById('inBad').value='';
+  document.getElementById('inProject').focus();
+  updatePreview();
+});
+function updatePreview(){
+  var cRaw = document.getElementById('inCount').value.trim();
+  var bRaw = document.getElementById('inBad').value.trim();
+  var hasAny = document.getElementById('inProject').value.trim()!=='' || cRaw!=='' || bRaw!=='';
+  var pe = document.getElementById('pvEff'), pc = document.getElementById('pvCny'), pu = document.getElementById('pvUsd');
+  if(!hasAny){
+    pe.textContent='—'; pc.textContent='—'; pu.textContent='—';
+    pe.className='na'; pc.className='na';
+    return;
+  }
+  var c = cRaw==='' ? 0 : parseInt(cRaw,10);
+  var b = bRaw==='' ? 0 : parseInt(bRaw,10);
+  if(isNaN(c)||c<0) c=0; if(isNaN(b)||b<0) b=0;
+  var eff=c-b, cny=r2(eff*S.price), usd=S.rate>0?r2(cny/S.rate):0;
+  pe.className=''; pc.className='';
+  pe.textContent = eff;
+  pc.textContent = '¥'+fmt(cny);
+  pu.textContent = fmt(usd);
+}
+['inProject','inCount','inBad'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+/* ============ 勾选 ============ */
+document.getElementById('tbody').addEventListener('change', function(e){
+  var cb = e.target.closest('input[data-sel]');
+  if(!cb) return;
+  S.sel[cb.dataset.sel] = cb.checked;
+  var rec = recById(cb.dataset.sel);
+  if(cb.checked && rec && rec.done) toast('该行已结清，不计入汇总');
+  save(); render();
+});
+document.getElementById('checkAll').addEventListener('change', function(e){
+  var v = e.target.checked;
+  filteredRecords().forEach(function(r){
+    if(v){ if(!r.done) S.sel[r.id] = true; }   // 全选：跳过已结清的行
+    else delete S.sel[r.id];                   // 取消全选：清空当前范围
+  });
+  save(); render();
+});
+document.getElementById('inPerson').addEventListener('change', function(){
+  S.person = curPerson();
+  if(S.person) addPersonHist(S.person);
+  save(); render();
+});
+
+/* ---- 归属人历史下拉：点入/输入自动弹出，点名字选用，点 × 删除 ---- */
+function closePersonDrop(){
+  document.getElementById('personDrop').classList.remove('open');
+}
+function renderPersonDrop(){
+  var box = document.getElementById('personDrop');
+  var kw = (document.getElementById('inPerson').value||'').trim();
+  var ps = allPersons().filter(function(p){ return !kw || p.indexOf(kw)>=0; });
+  box.innerHTML = ps.length
+    ? ps.map(function(p){
+        return '<div class="row" data-pick="'+esc(p)+'"><span>'+esc(p)+'</span></div>';
+      }).join('')
+    : '';
+  if(!ps.length) closePersonDrop();
+}
+function openPersonDrop(){
+  renderPersonDrop();
+  var box = document.getElementById('personDrop');
+  if(box.innerHTML) box.classList.add('open');
+}
+var inPersonEl = document.getElementById('inPerson');
+inPersonEl.addEventListener('focus', openPersonDrop);
+inPersonEl.addEventListener('input', openPersonDrop);
+inPersonEl.addEventListener('click', function(e){
+  e.stopPropagation();   // 修复：点输入框不被"点外部关闭"误伤（闪退）
+  openPersonDrop();
+});
+['inProject','inCount','inBad'].forEach(function(id){
+  document.getElementById(id).addEventListener('focus', closePersonDrop);
+});
+document.getElementById('personDrop').addEventListener('click', function(e){
+  e.stopPropagation();
+  var row = e.target.closest('.row[data-pick]');
+  if(row){
+    var name = row.dataset.pick;
+    document.getElementById('inPerson').value = name;
+    S.person = name; addPersonHist(name); save(); render();
+    closePersonDrop();
+  }
+});
+document.addEventListener('click', closePersonDrop);
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Escape') return;
+  closePersonDrop();
+  if(document.getElementById('closeMask').classList.contains('open')){ cancelCloseMask(); return; }
+  if(document.getElementById('helpMask').classList.contains('open')){ closeHelp(); return; }
+  if(document.getElementById('impMask').classList.contains('open')) closeImport();
+});
+
+/* ============ 编辑 ============ */
+document.getElementById('tbody').addEventListener('dblclick', function(e){
+  var td = e.target.closest('td.editable');
+  if(!td) return;
+  var id=td.dataset.id, f=td.dataset.f;
+  var rec=null;
+  for(var i=0;i<S.records.length;i++) if(S.records[i].id===id) rec=S.records[i];
+  if(!rec) return;
+  var inp=document.createElement('input');
+  inp.className='cellEdit';
+  inp.value = td.textContent;
+  if(f==='count'||f==='bad'){ inp.type='number'; inp.style.textAlign='right'; }
+  else inp.style.textAlign='left';
+  if(f==='person') inp.style.paddingLeft='24px';
+  // 锁住当前列宽，编辑框脱离文档流，保证双击前后表格零位移
+  td.style.width = td.offsetWidth+'px';
+  td.style.position = 'relative';
+  td.innerHTML=''; td.appendChild(inp); inp.focus(); inp.select();
+  var done=false;
+  var finish=function(ok){
+    if(done) return; done=true;
+    if(ok){
+      if(f==='project' && inp.value.trim()) rec.project = inp.value.trim();
+      if(f==='person'){
+        rec.person = inp.value.trim();
+        if(rec.person) addPersonHist(rec.person);
+      }
+      if(f==='count'||f==='bad'){
+        var n=parseInt(inp.value,10);
+        if(!isNaN(n) && n>=0){
+          rec[f]=n;
+          if(rec.bad>rec.count) rec.bad=rec.count;
+        }
+      }
+    }
+    save(); render();
+  };
+  inp.addEventListener('blur', function(){ finish(true); });
+  inp.addEventListener('keydown', function(ev){
+    if(ev.key==='Enter'){ ev.preventDefault(); finish(true); }
+    if(ev.key==='Escape'){ ev.preventDefault(); finish(false); }
+  });
+});
+
+/* ============ 已结账切换 + 删除 ============ */
+document.getElementById('tbody').addEventListener('click', function(e){
+  var tg = e.target.closest('button[data-tog]');
+  if(tg){
+    var rec = recById(tg.dataset.tog);
+    if(rec){
+      rec.done = !rec.done;
+      if(rec.done) delete S.sel[rec.id];   // 结清后自动取消勾选
+      save(); render(); toast(rec.done?('「'+rec.project+'」已标记结清'):('「'+rec.project+'」已恢复未结'));
+    }
+    return;
+  }
+  var b = e.target.closest('button[data-del]');
+  if(!b) return;
+  var id=b.dataset.del, idx=-1;
+  for(var i=0;i<S.records.length;i++) if(S.records[i].id===id) idx=i;
+  if(idx<0) return;
+  var removed = S.records.splice(idx,1)[0];
+  save(); render();
+  toast('已删除「'+removed.project+'」','撤销',function(){
+    S.records.splice(idx,0,removed); save(); render(); toast('已恢复');
+  });
+});
+
+/* ============ 表格行拖拽排序（整行可拖，放弃文本拖选） ============ */
+var dragId = null, dropTargetId = null, dropBefore = true;
+var tbEl = document.getElementById('tbody');
+function clearDropMarks(){
+  var els = tbEl.querySelectorAll('tr.drop-above,tr.drop-below,tr.dragging');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below','dragging');
+}
+function resetSort(){
+  S.sortMode = 'auto';
+  snapshotOrder();                    // 让 ord 与默认顺序保持一致
+  save(); render(); toast('已恢复默认排序（最新在前）');
+}
+tbEl.addEventListener('dragstart', function(e){
+  var tr = e.target.closest('tr'); if(!tr || !tr.dataset.id) return;
+  if(e.target.closest('input,button,a,label')){ e.preventDefault(); return; }   // 勾选框 / 按钮 / 链接不触发拖拽
+  dragId = tr.dataset.id; dropTargetId = null;
+  try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId); }catch(err){}
+  // 延后加半透明，避免拖拽影像整体变淡
+  setTimeout(function(){ if(dragId===tr.dataset.id) tr.classList.add('dragging'); }, 0);
+});
+tbEl.addEventListener('dragover', function(e){
+  if(!dragId) return;
+  e.preventDefault();
+  try{ e.dataTransfer.dropEffect = 'move'; }catch(err){}
+  var tr = e.target.closest('tr');
+  var mark = null;
+  if(tr && tr.dataset.id && tr.dataset.id!==dragId){
+    var r = tr.getBoundingClientRect();
+    dropBefore = e.clientY < r.top + r.height/2;
+    dropTargetId = tr.dataset.id;
+    mark = tr;
+  }else{
+    dropTargetId = null;
+  }
+  var els = tbEl.querySelectorAll('tr.drop-above,tr.drop-below');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below');
+  if(mark) mark.classList.add(dropBefore?'drop-above':'drop-below');
+});
+tbEl.addEventListener('dragleave', function(e){
+  if(!dragId) return;
+  if(e.relatedTarget && tbEl.contains(e.relatedTarget)) return;
+  dropTargetId = null;
+  var els = tbEl.querySelectorAll('tr.drop-above,tr.drop-below');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below');
+});
+tbEl.addEventListener('drop', function(e){
+  if(!dragId) return;
+  e.preventDefault();
+  var did = dragId, tid = dropTargetId, before = dropBefore;
+  clearDropMarks();
+  dragId = null; dropTargetId = null;
+  if(!tid || tid===did) return;
+  if(S.sortMode!=='manual'){ snapshotOrder(); S.sortMode = 'manual'; }   // 首次拖动：把当前默认顺序固化为手动顺序
+  if(moveRecord(did, tid, before)){
+    save(); render();
+    toast('已调整顺序','恢复默认',function(){ resetSort(); });
+  }
+});
+tbEl.addEventListener('dragend', function(){
+  clearDropMarks();
+  dragId = null; dropTargetId = null;
+});
+document.getElementById('sortReset').addEventListener('click', resetSort);
+
+/* ============ 设置项 ============ */
+function bindSettings(){
+  ['setPrice','setRate'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){
+      var p = parseFloat(document.getElementById('setPrice').value);
+      var r = parseFloat(document.getElementById('setRate').value);
+      if(!isNaN(p) && p>=0) S.price = p;
+      if(!isNaN(r) && r>0)  S.rate  = r;
+      save(); render(); updatePreview();
+      toast('已保存：单价 ¥'+S.price+'，汇率 '+S.rate);
+    });
+  });
+}
+
+/* ============ 导出 Excel ============ */
+function rowsXml(head, rows){
+  var x = '<Row>' + head.map(function(h){
+    return '<Cell ss:StyleID="h"><Data ss:Type="String">'+esc(h)+'</Data></Cell>';
+  }).join('') + '</Row>';
+  rows.forEach(function(r){
+    x += '<Row>' + r.map(function(c){
+      if(typeof c === 'number'){
+        var st = Number.isInteger(c) ? '' : ' ss:StyleID="n"';
+        return '<Cell'+st+'><Data ss:Type="Number">'+c+'</Data></Cell>';
+      }
+      return '<Cell><Data ss:Type="String">'+esc(c)+'</Data></Cell>';
+    }).join('') + '</Row>';
+  });
+  return '<Worksheet ss:Name="@@NAME@@"><Table>'+x+'</Table></Worksheet>';
+}
+function exportExcel(){
+  var pool = filteredRecords();                                   // a+b：筛选了谁就只导谁
+  var picked = pool.filter(function(r){ return S.sel[r.id]; });
+  var use = picked.length ? picked : pool;
+  if(!use.length){ toast('没有记录'); return; }
+
+  var det = use.map(function(r){
+    var c=calc(r);
+    return [r.project, r.person||'', r.date||'', +r.count, +r.bad, c.eff, c.cny, c.usd, +r.rate, r.done?'已结':'未结', r.note||''];
+  });
+  var T={count:0,bad:0,eff:0,cny:0,usd:0};
+  use.forEach(function(r){ var c=calc(r); T.count+=+r.count; T.bad+=+r.bad; T.eff+=c.eff; T.cny+=c.cny; T.usd+=c.usd; });
+  det.push(['合计','','', T.count, T.bad, T.eff, r2(T.cny), r2(T.usd), '', '', '']);
+
+  var sum = use.map(function(r){
+    var c=calc(r); return [r.project, r.person||'', r.date||'', +r.count, +r.bad, c.eff, c.cny, c.usd, r.done?'已结':'未结', r.note||''];
+  });
+  sum.push(['合计','','', T.count, T.bad, T.eff, r2(T.cny), r2(T.usd), '', '']);
+
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n'+
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+
+    '<Styles>'+
+      '<Style ss:ID="h"><Font ss:Bold="1"/><Interior ss:Color="#DDEBF7" ss:Pattern="Solid"/></Style>'+
+      '<Style ss:ID="n"><NumberFormat ss:Format="0.00"/></Style>'+
+    '</Styles>'+
+    rowsXml(['项目名','归属人','日期','单数','错单','有效单数','人民币','美元','汇率','状态','备注'], det).replace('@@NAME@@','明细') +
+    rowsXml(['项目名','归属人','日期','单数','错单','有效单数','人民币','美元','状态','备注'], sum).replace('@@NAME@@','汇总') +
+    '</Workbook>';
+
+  var tag = (S.filter!=='__ALL__') ? ('_'+(S.filter==='__NONE__'?'无归属人':S.filter)) : '';
+  download(new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'}),
+           '结算'+tag+'_'+todayStr()+'.xls');
+  toast('已导出 '+use.length+' 个项目');
+}
+
+/* ============ 清空 ============ */
+function clearAll(){
+  var pool = filteredRecords();
+  if(!pool.length){ toast('当前没有可清空的项目'); return; }
+  var scoped = (S.filter!=='__ALL__');
+  var label = scoped
+    ? ('「'+(S.filter==='__NONE__'?'无归属人':S.filter)+'」的 '+pool.length+' 个')
+    : ('全部 '+pool.length+' 个');
+  if(!confirm('清空'+label+'项目？\n\n建议先「导出 Excel」留个底。\n清空后可撤销。')) return;
+  var backup = S.records.slice(), backupSel = {};
+  for(var k in S.sel) backupSel[k]=S.sel[k];
+  var backupPersons = S.persons.slice();
+  var backupPerson = S.person;
+  var backupInput = document.getElementById('inPerson').value;
+  if(!scoped){
+    S.records = []; S.sel = {};
+  }else{
+    var ids = {};
+    pool.forEach(function(r){ ids[r.id]=1; });
+    S.records = S.records.filter(function(r){ return !ids[r.id]; });
+    pool.forEach(function(r){ delete S.sel[r.id]; });
+  }
+  // 历史名单同步清理：全清=抹光；按人清=抹掉已无任何记录的人
+  if(!scoped){
+    S.persons = [];
+  }else{
+    var alive = {};
+    S.records.forEach(function(r){ var p=(r.person||'').trim(); if(p) alive[p]=1; });
+    S.persons = S.persons.filter(function(p){ return alive[p]; });
+  }
+  // 归属人输入框与当前归属人一并清空，不留任何上下文残留
+  S.person = '';
+  document.getElementById('inPerson').value = '';
+  save(); render();
+  toast('已清空 '+pool.length+' 个项目','撤销',function(){
+    S.records = backup; S.sel = backupSel; S.persons = backupPersons; S.person = backupPerson;
+    document.getElementById('inPerson').value = backupInput;
+    save(); render(); toast('已恢复');
+  });
+}
+
+/* ============ 导入（文本 / 文件 / 截图OCR） ============ */
+var impItems = [];
+var ocrWorker = null, ocrBusy = false;
+
+function openImport(){
+  document.getElementById('impMask').classList.add('open');
+}
+function closeImport(){
+  document.getElementById('impMask').classList.remove('open');
+  impItems = []; renderImpPreview();
+  document.getElementById('ocrStat').textContent='';
+  document.getElementById('ocrPrev').innerHTML='';
+}
+function impTab(name){
+  var tabs = document.querySelectorAll('.mtabs button');
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('on', tabs[i].dataset.tab===name);
+  ['text','file','ocr'].forEach(function(n){
+    document.getElementById('imp-'+n).classList.toggle('on', n===name);
+  });
+}
+
+/* ---- 快手群邀请消息解析：一条消息 = 一个项目 ----
+   项目名=第一个【】内容（跳过"快手App"），单数="人数N"，
+   错单=人数行之后每行末尾数字累加；支持一次粘贴多条 */
+function parseGroupMessages(text){
+  var lines = String(text||'').split(/\r?\n/);
+  var items = [], cur = null;
+  function pushCur(){
+    if(cur && cur.project){
+      cur.note = (cur.badLines||[]).join('、');   // 错单明细，如"日本1、小孩4"
+      items.push(cur);
+    }
+    cur = null;
+  }
+  lines.forEach(function(raw){
+    var line = raw.trim();
+    if(!line) return;
+    if(/群聊|加群|快手/.test(line) && line.indexOf('【')>=0){
+      pushCur();
+      var names = [], re = /【([^】]+)】/g, m;
+      while((m = re.exec(line))) names.push(m[1]);
+      var proj = '';
+      for(var i=0;i<names.length;i++){
+        if(!/^快手\s*App$/i.test(names[i])){ proj = names[i]; break; }
+      }
+      if(!proj && names.length) proj = names[0];
+      if(!proj) return;               // 没拿到名字就当普通行忽略
+      cur = { project:proj, count:0, bad:0, seen:false, badLines:[] };
+      return;
+    }
+    if(!cur) return;
+    var mc = line.match(/^人数\s*[:：]?\s*(\d+)\s*$/);
+    if(mc){ cur.count = parseInt(mc[1],10); cur.seen = true; return; }
+    if(cur.seen){
+      var mn = line.match(/(\d+)\s*$/);
+      if(mn){ cur.bad += parseInt(mn[1],10); cur.badLines.push(line); }
+    }
+  });
+  pushCur();
+  items.forEach(function(it){ delete it.seen; delete it.badLines; });
+  return items;
+}
+
+/* ---- 通用行解析：项目名 + 单数[+错单]，错单默认0；兼容表格截图行（末尾带 有效单数/金额/日期列） ---- */
+function parseLine(line){
+  line = String(line||'').trim();
+  if(!line) return null;
+  if(line.charAt(0)==='#' || line.indexOf('//')===0) return null;   // 注释行
+  var parts = line.split(/[\t,，、\s]+/).filter(function(s){return s!=='';});
+  if(!parts.length) return null;
+  // 丢掉末尾的操作列杂质（表格删除按钮 × / x 等）与小数列（人民币/美元金额，如 145.00）
+  while(parts.length && /^[xX×✕✖]$/.test(parts[parts.length-1])) parts.pop();
+  while(parts.length && /^\d+\.\d+$/.test(parts[parts.length-1])) parts.pop();
+  var nums = [];
+  while(parts.length && /^\d+$/.test(parts[parts.length-1])) nums.unshift(parts.pop());
+  var name = parts.join(' ').trim();
+  if(!name) return null;
+  // 跳过表头行与汇总页脚行（如「7 项」「已选项目」「合计」）
+  if(!nums.length && /项目|名称|单数|错单/.test(name)) return null;
+  if(/^\d+\s*项$/.test(name) || /已选|合计|总计|汇总/.test(name)) return null;
+  var count = nums.length ? parseInt(nums[0],10) : 0;
+  var bad   = nums.length>1 ? parseInt(nums[1],10) : 0;
+  // 表格行常见三列整数：单数 错单 有效单数（有效=单-错），识别后丢弃有效列
+  if(nums.length>=3 && nums[0]-nums[1] === nums[nums.length-1]){
+    count = parseInt(nums[0],10); bad = parseInt(nums[1],10);
+  }
+  if(bad>count) bad = count;
+  return { project:name, count:count, bad:bad };
+}
+function parseTextLines(text){
+  var out = [];
+  String(text||'').split(/\r?\n/).forEach(function(l){
+    var it = parseLine(l); if(it) out.push(it);
+  });
+  // 表格类内容（截图/粘贴）常带勾选框、日期列、归属人列，做一轮清理
+  var known = {};
+  (S.people||[]).forEach(function(p){ known[p]=1; });
+  S.records.forEach(function(r){ if(r.person) known[r.person]=1; });
+  out = out.map(function(it){
+    var name = it.project;
+    name = name.replace(/^[^一-龥A-Za-z0-9]{1,2}\s+/, '');            // 行首勾选框等识别杂质
+    name = name.replace(/\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/g, ' ')        // 日期列 2026-10-06
+               .replace(/(^|\s)\d{1,2}[-/.]\d{1,2}(?=\s|$)/g, '$1')   // 日期列 10-06
+               .replace(/\s{2,}/g, ' ').trim();
+    var parts = name.split(/\s+/);
+    if(parts.length>1 && known[parts[parts.length-1]]){               // 末尾是已有归属人 → 视为归属人列
+      it.person = parts.pop();
+      name = parts.join(' ');
+    }
+    it.project = name;
+    return it;
+  }).filter(function(it){ return it.project; });
+  return out;
+}
+
+/* ---- 方式一：粘贴文本 ---- */
+function parseTextImport(){
+  var text = document.getElementById('impText').value;
+  var items = parseGroupMessages(text);          // 优先识别群邀请消息
+  if(!items.length) items = parseTextLines(text); // 否则按普通逐行格式
+  if(!items.length){ toast('没解析到内容，检查格式（直接粘贴群邀请消息，或每行：项目名 单数）'); return; }
+  impItems = items; renderImpPreview();
+}
+
+/* ---- 方式二：文件（txt/csv/xlsx） ---- */
+document.getElementById('impFile').addEventListener('change', function(e){
+  if(e.target.files.length) handleDataFile(e.target.files[0]);
+  e.target.value='';
+});
+var fileDrop = document.getElementById('fileDrop');
+['dragover','dragenter'].forEach(function(ev){ fileDrop.addEventListener(ev,function(e){e.preventDefault();fileDrop.classList.add('hl');}); });
+['dragleave','drop'].forEach(function(ev){ fileDrop.addEventListener(ev,function(e){e.preventDefault();fileDrop.classList.remove('hl');}); });
+fileDrop.addEventListener('drop', function(e){
+  if(e.dataTransfer.files.length) handleDataFile(e.dataTransfer.files[0]);
+});
+
+function readTextSmart(buf){
+  try{ return new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+  catch(e){ try{ return new TextDecoder('gbk').decode(buf); }catch(e2){ return new TextDecoder('utf-8').decode(buf); } }
+}
+function handleDataFile(f){
+  var ext = (f.name.split('.').pop()||'').toLowerCase();
+  var rd = new FileReader();
+  rd.onload = function(){
+    var items = [];
+    try{
+      if(ext==='xlsx' || ext==='xls'){
+        var wb = XLSX.read(new Uint8Array(rd.result), {type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+        rows.forEach(function(row){
+          var cells = (row||[]).map(function(c){ return String(c).trim(); }).filter(function(s){return s!=='';});
+          if(!cells.length) return;
+          var texts=[], nums=[];
+          cells.forEach(function(c){
+            if(/^\d+$/.test(c)) nums.push(c);
+            else texts.push(c);
+          });
+          var name = texts[0], person = texts[1]||'';   // 第2列文字=归属人（选填）
+          if(!name) return;
+          if(!nums.length && /项目|名称|归属|单数|错单/.test(name)) return;  // 表头
+          var count = nums.length?parseInt(nums[0],10):0;
+          var bad = nums.length>1?parseInt(nums[1],10):0;
+          if(bad>count) bad=count;
+          items.push({project:name, person:person, count:count, bad:bad});
+        });
+      }else{
+        items = parseTextLines(readTextSmart(rd.result));
+      }
+    }catch(err){ toast('文件解析失败：'+err.message); return; }
+    if(!items.length){ toast('没解析到内容，检查文件格式'); return; }
+    impItems = items; renderImpPreview();
+    toast('已解析 '+items.length+' 条，请确认');
+  };
+  if(ext==='xlsx'||ext==='xls') rd.readAsArrayBuffer(f);
+  else rd.readAsArrayBuffer(f);   // txt/csv 也用 arrayBuffer + 智能解码（兼容GBK）
+}
+
+/* ---- 方式三：截图 OCR ---- */
+var ocrDrop = document.getElementById('ocrDrop');
+ocrDrop.addEventListener('click', function(){ ocrDrop.focus(); });
+['dragover','dragenter'].forEach(function(ev){ ocrDrop.addEventListener(ev,function(e){e.preventDefault();ocrDrop.classList.add('hl');}); });
+['dragleave','drop'].forEach(function(ev){ ocrDrop.addEventListener(ev,function(e){e.preventDefault();ocrDrop.classList.remove('hl');}); });
+ocrDrop.addEventListener('drop', function(e){
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f && /^image\//.test(f.type)) runOCR(f);
+});
+document.addEventListener('paste', function(e){
+  if(!document.getElementById('impMask').classList.contains('open')) return;
+  if(!document.getElementById('imp-ocr').classList.contains('on')) return;
+  var items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(/^image\//.test(items[i].type)){
+      var f = items[i].getAsFile(); if(f){ runOCR(f); e.preventDefault(); return; }
+    }
+  }
+});
+function ocrStatus(msg, pct){
+  document.getElementById('ocrStat').textContent = msg;
+  var bar=document.getElementById('ocrBar');
+  if(pct===null){ bar.style.display='none'; return; }
+  bar.style.display='block';
+  document.getElementById('ocrBarIn').style.width = Math.round(pct*100)+'%';
+}
+/* 截图预处理：放大后再识别（小字截图放大 2~3 倍，准确率显著提升），失败则回退原图 */
+function ocrPreprocess(url){
+  return new Promise(function(resolve){
+    var img = new Image();
+    img.onload = function(){
+      var scale = 2;
+      if(img.width * scale > 3000) scale = Math.max(1, 3000 / img.width);   // 上限 3000px 宽，防止过慢
+      if(img.width * scale < 1200) scale = Math.min(3, 1200 / img.width);   // 小图放得更大
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      var ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = function(){ resolve(url); };
+    img.src = url;
+  });
+}
+function runOCR(file){
+  if(ocrBusy){ toast('正在识别中，请稍候'); return; }
+  if(typeof Tesseract==='undefined'){ ocrStatus('识别组件未加载，请检查 lib 目录', null); return; }
+  ocrBusy = true;
+  var url = URL.createObjectURL(file);
+  document.getElementById('ocrPrev').innerHTML = '<img src="'+url+'">';
+  ocrStatus('正在加载识别引擎（首次约几秒）…', 0);
+  var done = function(){ ocrBusy=false; try{ URL.revokeObjectURL(url); }catch(e){} };
+  var getWorker = ocrWorker ? Promise.resolve(ocrWorker) :
+    Tesseract.createWorker(['chi_sim','eng'], 1, {
+      workerPath:'lib/worker.min.js',
+      corePath:'lib',
+      langPath:'lib/lang',
+      gzip:false,
+      logger:function(m){
+        if(m.status==='recognizing text') ocrStatus('正在识别文字…', m.progress);
+      }
+    }).then(function(w){
+      ocrWorker = w;
+      // PSM 6 = 整块文本模式，适合表格/列表类截图逐行识别
+      if(w.setParameters){
+        return w.setParameters({
+          tessedit_pageseg_mode: (Tesseract.PSM && Tesseract.PSM.SINGLE_BLOCK) || '6'
+        }).then(function(){ return w; }, function(){ return w; });
+      }
+      return w;
+    });
+  getWorker.then(function(w){
+    ocrStatus('正在识别文字…', 0.01);
+    return ocrPreprocess(url).then(function(u){ return w.recognize(u); });
+  }).then(function(res){
+    done();
+    ocrStatus('识别完成，请在下方核对', null);
+    var items = parseTextLines(res && res.data ? res.data.text : '');
+    if(!items.length){ toast('没识别出有效内容，换张更清晰的截图试试'); return; }
+    impItems = items; renderImpPreview();
+    toast('识别出 '+items.length+' 条，请逐条核对');
+  }).catch(function(err){
+    done();
+    ocrStatus('识别失败：'+(err && err.message ? err.message : err), null);
+  });
+}
+
+/* ---- 预览与确认 ---- */
+function renderImpPreview(){
+  var wrap = document.getElementById('impPvWrap');
+  var okBtn = document.getElementById('impOk');
+  var tb = document.getElementById('impPvBody');
+  tb.innerHTML='';
+  if(!impItems.length){
+    wrap.style.display='none'; okBtn.style.display='none';
+    document.getElementById('impCnt').textContent='';
+    return;
+  }
+  var seen = {};
+  var pn = curPerson();
+  impItems.forEach(function(it, i){
+    var itPerson = (it.person!==undefined && String(it.person).trim()!=='') ? String(it.person).trim() : pn;
+    var dup = seen[it.project+'|'+itPerson] || S.records.some(function(r){ return r.project===it.project && (r.person||'')===itPerson; });
+    seen[it.project+'|'+itPerson]=true;
+    var tr = document.createElement('tr');
+    if(dup) tr.className='dup';
+    tr.innerHTML =
+      '<td class="l"><input data-i="'+i+'" data-f="project" value="'+esc(it.project)+'"></td>'+
+      '<td><input class="num" type="number" min="0" step="1" data-i="'+i+'" data-f="count" value="'+it.count+'"></td>'+
+      '<td><input class="num" type="number" min="0" step="1" data-i="'+i+'" data-f="bad" value="'+it.bad+'"></td>'+
+      '<td class="c"><button class="link" data-rm="'+i+'">×</button></td>';
+    tb.appendChild(tr);
+  });
+  wrap.style.display='block'; okBtn.style.display='';
+  document.getElementById('impCnt').textContent = '共 '+impItems.length+' 项（黄色「重复」标记的导入时会覆盖同名项目）';
+}
+document.getElementById('impPvBody').addEventListener('input', function(e){
+  var inp = e.target.closest('input[data-i]'); if(!inp) return;
+  var it = impItems[+inp.dataset.i]; if(!it) return;
+  var f = inp.dataset.f;
+  if(f==='project') it.project = inp.value;
+  else{
+    var n = parseInt(inp.value,10);
+    it[f] = isNaN(n)||n<0 ? 0 : n;
+  }
+});
+document.getElementById('impPvBody').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-rm]'); if(!b) return;
+  impItems.splice(+b.dataset.rm,1); renderImpPreview();
+});
+function confirmImport(){
+  if(!impItems.length) return;
+  var added=0, over=0;
+  var pn = curPerson();
+  impItems.forEach(function(it){
+    var p = String(it.project||'').trim(); if(!p) return;
+    if(it.bad>it.count) it.bad=it.count;
+    var itPerson = (it.person!==undefined && String(it.person).trim()!=='') ? String(it.person).trim() : pn;   // 行内归属人优先
+    var dup=null;
+    for(var i=0;i<S.records.length;i++) if(S.records[i].project===p && (S.records[i].person||'')===itPerson){ dup=S.records[i]; break; }
+    if(dup){ dup.count=it.count; dup.bad=it.bad; if(it.note) dup.note=it.note; over++; }
+    else{
+      var id=uid();
+      S.records.push({ id:id, project:p, count:it.count, bad:it.bad, price:+S.price, rate:+S.rate, person:itPerson, date:todayISO(), note:it.note||'', ord:newOrd() });
+      S.sel[id]=true; added++;
+    }
+    addPersonHist(itPerson);
+  });
+  // 同录入：保证导入结果在当前筛选下可见
+  if(pn){ if(S.filter!=='__ALL__' && S.filter!==pn) S.filter = pn; }
+  else if(S.filter!=='__ALL__'){ S.filter = '__ALL__'; }
+  save(); render();
+  var msg = '导入完成：新增 '+added+' 项'+(over?'，覆盖 '+over+' 项同名项目':'')+(pn?('（归属人：'+pn+'）'):'');
+  document.getElementById('impText').value='';   // 防止下次误重复导入
+  closeImport();
+  toast(msg);
+}
+
+/* ---- 模板下载 ---- */
+function dlTplTxt(){
+  var txt =
+    '# 结账助手导入模板（TXT）\n'+
+    '# 每行一条：项目名 单数（可再跟一个错单数，不写默认0）\n'+
+    '# 以 # 开头的行会被忽略，导入前把示例行删掉换成你的数据\n'+
+    '示例项目A 100 3\n'+
+    '示例项目B 50\n'+
+    '示例项目C 80\n';
+  download(new Blob(['\ufeff'+txt],{type:'text/plain;charset=utf-8'}), '结账助手导入模板.txt');
+  toast('TXT 模板已下载，填完后拖进来导入');
+}
+function dlTplXlsx(){
+  if(typeof XLSX==='undefined'){ toast('表格组件未加载'); return; }
+  var aoa = [
+    ['项目名','归属人','单数','错单'],
+    ['示例项目A','张三',100,3],
+    ['示例项目B','张三',50,0],
+    ['示例项目C','',80,0]
+  ];
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:24},{wch:12},{wch:8},{wch:8}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '导入模板');
+  var out = XLSX.write(wb, {type:'array', bookType:'xlsx'});
+  download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), '结账助手导入模板.xlsx');
+  toast('Excel 模板已下载，填完后拖进来导入');
+}
+
+/* ============ 工具 ============ */
+var tTimer=null;
+function toast(msg, actLabel, act){
+  var t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  var box=document.getElementById('toastAct'); box.innerHTML='';
+  if(actLabel && act){
+    var b=document.createElement('button'); b.textContent=actLabel;
+    b.onclick=function(){ t.classList.remove('show'); act(); };
+    box.appendChild(b);
+  }
+  t.classList.add('show');
+  clearTimeout(tTimer);
+  tTimer=setTimeout(function(){ t.classList.remove('show'); }, actLabel?6000:2000);
+}
+function download(blob, name){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); },300);
+}
+
+/* ============ 启动 ============ */
+document.getElementById('setPrice').value = S.price;
+document.getElementById('setRate').value = S.rate;
+document.getElementById('inPerson').value = S.person || '';
+bindSettings();
+applyTheme();
+applyFont();
+refreshHotkeyBtn();
+render(); updatePreview();
+document.getElementById('inProject').focus();
+</script>
+</body>
+</html>

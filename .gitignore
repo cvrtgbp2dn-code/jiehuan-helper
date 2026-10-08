@@ -1,0 +1,12 @@
+# 打包产物与依赖（不上传仓库）
+_build/node_modules/
+_build/lib/
+_build/_staging/
+结账助手-win32-x64/
+_release/out/
+*.zip
+
+# 系统垃圾文件
+Thumbs.db
+.DS_Store
+desktop.ini

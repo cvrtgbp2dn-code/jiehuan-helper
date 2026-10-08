@@ -1,0 +1,6 @@
+{
+  "owner": "OWNER",
+  "repo": "REPO",
+  "branch": "main",
+  "_说明": "把 owner 改成你的 GitHub 用户名，repo 改成仓库名（例如 jiehuan-helper），branch 一般是 main。改完保存，然后运行 发布.bat 或 node _release/build-release.js"
+}
