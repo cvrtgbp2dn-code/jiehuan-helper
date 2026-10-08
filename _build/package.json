@@ -1,7 +1,7 @@
 {
   "name": "checkout-helper",
   "productName": "结账助手",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "main": "main.js",
   "devDependencies": {
     "@electron/packager": "^20.3.0",
