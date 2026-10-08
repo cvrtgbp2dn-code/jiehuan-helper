@@ -64,15 +64,24 @@ input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 ::placeholder{color:var(--na);opacity:1}
 input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
 
-/* 设置（默认收起） */
-.settings{display:none;padding:14px 16px;font-size:12px;color:var(--muted)}
+/* 设置（默认收起）：分区标题 + 细线；分区内容用自适应网格，横向铺满、方便后续加项 */
+.settings{display:none;padding:16px 18px 18px;font-size:13px;color:var(--muted)}
 .settings.open{display:block}
-.setrow{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap}
-.setrow .grp{display:flex;align-items:center;gap:6px}
-.setrow .grp input{width:82px}
-.setrow label{font-size:12px;color:var(--muted)}
+.setsec + .setsec{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.setsec-title{font-size:11px;letter-spacing:.06em;color:var(--muted);opacity:.75;margin:0 0 11px}
+
+/* 分区内容：label 在控件上方、各列纵向对齐；列宽等分铺满，右侧不留大片空白。
+   固定 3 列 —— 各分区列宽一致、纵向对齐；后续新增设置项自动换行进入下一行第 1 列。 */
+.setgrid{display:grid;grid-template-columns:repeat(3,1fr);
+  column-gap:24px;row-gap:16px;align-items:start}
+
+.setgrid .grp{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}
+.setgrid label{font-size:12px;color:var(--text);white-space:nowrap}
+.setgrid .grp input{width:110px}   /* 计价输入框：固定宽度，不被网格拉满 */
+
+/* 计价区备注 */
 .setnote{color:var(--muted);font-size:12px}
-.segbtns{display:inline-flex;gap:6px}
+.segbtns{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
 .segbtns button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 
 .entry{padding:16px;display:grid;grid-template-columns:1.2fr 1.6fr 1fr 1fr auto;gap:10px;align-items:end}
@@ -136,6 +145,12 @@ td.noteable{text-decoration:underline dotted;text-underline-offset:3px}
 .sideitem .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .sideitem.done{color:var(--muted)}
 .sideitem.done .nm::after{content:" ✓";color:var(--ok)}
+/* 归属人筛选：拖拽排序（整条可拖，插入位置蓝线提示） */
+.sideitem[draggable="true"]{cursor:grab;-webkit-user-select:none;user-select:none}
+.sideitem[draggable="true"]:active{cursor:grabbing}
+.sideitem.dragging{opacity:.35}
+.sideitem.drop-above{box-shadow:inset 0 2px 0 var(--accent)}
+.sideitem.drop-below{box-shadow:inset 0 -2px 0 var(--accent)}
 td.eff{color:var(--ok);font-weight:600}
 td.usd{color:var(--accent);font-weight:600}
 .editable{cursor:grab}
@@ -254,40 +269,51 @@ button.danger:hover{opacity:.88;color:#fff;border-color:var(--danger)}
 
   <!--pnid:DX209zEHqa8LmgKYWubuTf--><!-- 单价 / 汇率：默认收起 -->
   <div data-page-node-id="qIQWJTkKKzqnvIBrEVwBC9" class="card settings" id="setPanel">
-    <div data-page-node-id="mx4LMNuge4xMmDaAmwsSMo" class="setrow">
-      <div data-page-node-id="64InQuETHWVCx8w03LtaSO" class="grp"><label data-page-node-id="R8FglUANWDUWwEzjG2acyk"><!--pnid:9TJRIVL8nZ6arptOKIizRK-->每单单价 ¥</label><input data-page-node-id="dRxcNzHsy4AXmYkOcnHj8S" id="setPrice" min="0" step="0.5" type="number"></div>
-      <div data-page-node-id="DtihL0z2ImRV1xlDVYEntA" class="grp"><label data-page-node-id="JdPYFXEjvaXjtrxaJfwa6k"><!--pnid:2AB2qC79Fp1Amtc2p1O9h9-->汇率 1 美元 =</label><input data-page-node-id="4fHfMNZPi9ewrTjvTPq5eh" id="setRate" min="0" step="0.1" type="number"></div>
-      <span data-page-node-id="PEGCPBSwNgAlkuj72yAws8" class="setnote"><!--pnid:eGtsY3M6MX849QpXfSVcqf-->仅影响此后新记录</span>
+    <div class="setsec">
+      <div class="setsec-title">计价</div>
+      <div class="setgrid">
+        <div data-page-node-id="64InQuETHWVCx8w03LtaSO" class="grp"><label data-page-node-id="R8FglUANWDUWwEzjG2acyk"><!--pnid:9TJRIVL8nZ6arptOKIizRK-->每单单价 ¥</label><input data-page-node-id="dRxcNzHsy4AXmYkOcnHj8S" id="setPrice" min="0" step="0.5" type="number"></div>
+        <div data-page-node-id="DtihL0z2ImRV1xlDVYEntA" class="grp"><label data-page-node-id="JdPYFXEjvaXjtrxaJfwa6k"><!--pnid:2AB2qC79Fp1Amtc2p1O9h9-->汇率 1 美元 =</label><input data-page-node-id="4fHfMNZPi9ewrTjvTPq5eh" id="setRate" min="0" step="0.1" type="number"></div>
+      </div>
+      <div class="setnote" style="margin-top:10px"><!--pnid:eGtsY3M6MX849QpXfSVcqf-->改动只影响此后新记录，已记的账沿用记账当时的数值</div>
     </div>
-    <div class="setrow" style="margin-top:12px">
-      <div class="grp"><label>主题</label>
-        <span class="segbtns">
-          <button type="button" class="sm" data-theme-pick="light">亮色</button>
-          <button type="button" class="sm" data-theme-pick="dark">暗色</button>
-          <button type="button" class="sm" data-theme-pick="auto">跟随系统</button>
-        </span>
+    <div class="setsec">
+      <div class="setsec-title">系统</div>
+      <div class="setgrid">
+        <div class="grp"><label>主题</label>
+          <span class="segbtns">
+            <button type="button" class="sm" data-theme-pick="light">亮色</button>
+            <button type="button" class="sm" data-theme-pick="dark">暗色</button>
+            <button type="button" class="sm" data-theme-pick="auto">跟随系统</button>
+          </span>
+        </div>
+        <div class="grp"><label>字号</label>
+          <span class="segbtns">
+            <button type="button" class="sm" data-font-pick="s">小</button>
+            <button type="button" class="sm" data-font-pick="m">中</button>
+            <button type="button" class="sm" data-font-pick="l">大</button>
+          </span>
+        </div>
+        <div class="grp"><label>快捷键</label>
+          <span class="segbtns">
+            <button type="button" class="sm" id="hotkeyBtn">Alt+Z</button>
+            <button type="button" class="sm" id="hotkeyReset">恢复默认</button>
+          </span>
+        </div>
       </div>
-      <div class="grp"><label>字号</label>
-        <span class="segbtns">
-          <button type="button" class="sm" data-font-pick="s">小</button>
-          <button type="button" class="sm" data-font-pick="m">中</button>
-          <button type="button" class="sm" data-font-pick="l">大</button>
-        </span>
-      </div>
-      <div class="grp"><label>快捷键</label>
-        <span class="segbtns">
-          <button type="button" class="sm" id="hotkeyBtn">Alt+Z</button>
-          <button type="button" class="sm" id="hotkeyReset">恢复默认</button>
-        </span>
-      </div>
-      <div class="grp"><label>版本</label>
-        <span class="segbtns">
-          <button type="button" class="sm" id="updCheckBtn">检查更新</button>
-          <span class="setver" id="verLabel">v—</span>
-        </span>
-      </div>
-      <div class="grp">
-        <span class="segbtns"><button type="button" class="sm" onclick="openHelp()">帮助中心</button></span>
+    </div>
+    <div class="setsec">
+      <div class="setsec-title">关于</div>
+      <div class="setgrid">
+        <div class="grp"><label>版本</label>
+          <span class="segbtns">
+            <button type="button" class="sm" id="updCheckBtn">检查更新</button>
+            <span class="setver" id="verLabel">v—</span>
+          </span>
+        </div>
+        <div class="grp"><label>帮助</label>
+          <span class="segbtns"><button type="button" class="sm" onclick="openHelp()">帮助中心</button></span>
+        </div>
       </div>
     </div>
   </div>
@@ -464,6 +490,7 @@ function load(){
           o.persons = o.persons || [];        // 归属人历史名单
           o.person  = o.person  || '';        // 当前归属人
           o.filter  = o.filter  || '__ALL__'; // 列表筛选
+          o.sideOrder = o.sideOrder || [];    // 归属人筛选列表的手动排序（存名字）
           o.sortMode = (o.sortMode==='manual') ? 'manual' : 'auto';   // auto=按日期最新在前 / manual=手动拖拽顺序
           o.theme   = o.theme   || 'auto';    // 主题：light / dark / auto(跟随系统)
           o.font    = o.font    || 'm';       // 字号：s / m / l
@@ -472,7 +499,7 @@ function load(){
       }
     }catch(e){}
   }
-  return { price:5, rate:6.8, records:[], sel:{}, persons:[], person:'', filter:'__ALL__', sortMode:'auto', theme:'auto', font:'m' };
+  return { price:5, rate:6.8, records:[], sel:{}, persons:[], person:'', filter:'__ALL__', sideOrder:[], sortMode:'auto', theme:'auto', font:'m' };
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -825,25 +852,36 @@ function personStats(){
     m[p].total++;
     if(!r.done) m[p].undone++;
   });
-  return { m:m, order:order };
+  // 手动排序：已记录在 sideOrder 里的按它排；新出现的（尚未排过）追加在后面，保持首次录入顺序
+  var so = S.sideOrder || [];
+  var manual = so.length>0;
+  if(manual){
+    order.sort(function(a,b){
+      var ia = so.indexOf(a), ib = so.indexOf(b);
+      if(ia<0) ia = 1e6 + order.indexOf(a);
+      if(ib<0) ib = 1e6 + order.indexOf(b);
+      return ia - ib;
+    });
+  }
+  return { m:m, order:order, manual:manual };
 }
 function renderSidebar(){
   var st = personStats();
   if(S.filter!=='__ALL__' && S.filter!=='__NONE__' && !st.m[S.filter]) S.filter = '__ALL__';   // 筛选的人已不存在则回退
   var html = '';
-  function item(v, label, count, cls){
-    return '<div class="sideitem'+(S.filter===v?' on':'')+(cls?' '+cls:'')+'" data-v="'+esc(v)+'">'+
+  function item(v, label, count, cls, drag){
+    return '<div class="sideitem'+(S.filter===v?' on':'')+(cls?' '+cls:'')+'" data-v="'+esc(v)+'"'+(drag?' draggable="true"':'')+'>'+
       '<span class="nm">'+esc(label)+'</span><span class="n">'+count+'</span></div>';
   }
-  html += item('__ALL__','全部项目', S.records.length, 'head');
+  html += item('__ALL__','全部项目', S.records.length, 'head', false);
   html += '<div class="sidecap">归属人筛选</div>';
   st.order.forEach(function(p){
     if(!p) return;
     var s = st.m[p];
-    html += item(p, p, s.total, (s.total>0 && s.undone===0) ? 'done' : '');
+    html += item(p, p, s.total, (s.total>0 && s.undone===0) ? 'done' : '', true);
   });
   var noneS = st.m[''] || {total:0,undone:0};
-  if(noneS.total>0) html += item('__NONE__','无归属', noneS.total, noneS.undone===0?'done':'');
+  if(noneS.total>0) html += item('__NONE__','无归属', noneS.total, noneS.undone===0?'done':'', true);
   document.getElementById('sideList').innerHTML = html;
 }
 document.getElementById('sideList').addEventListener('click', function(e){
@@ -1219,6 +1257,79 @@ tbEl.addEventListener('dragend', function(){
   dragId = null; dropTargetId = null;
 });
 document.getElementById('sortReset').addEventListener('click', resetSort);
+
+/* ============ 归属人筛选列表拖拽排序 ============ */
+var sideDragV = null, sideDropV = null, sideDropBefore = true;
+var sideListEl = document.getElementById('sideList');
+function sideDraggableItems(){
+  var out = [], els = sideListEl.querySelectorAll('.sideitem[draggable="true"]');
+  for(var i=0;i<els.length;i++) out.push(els[i]);
+  return out;
+}
+function clearSideMarks(){
+  var els = sideListEl.querySelectorAll('.drop-above,.drop-below,.dragging');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below','dragging');
+}
+/* 把当前渲染顺序固化到 S.sideOrder（作为手动排序的起点） */
+function snapshotSideOrder(){
+  S.sideOrder = sideDraggableItems().map(function(el){ return el.dataset.v; })
+    .filter(function(v){ return v && v!=='__NONE__'; });
+}
+sideListEl.addEventListener('dragstart', function(e){
+  var it = e.target.closest('.sideitem[draggable="true"]'); if(!it) return;
+  sideDragV = it.dataset.v; sideDropV = null;
+  if(!(S.sideOrder && S.sideOrder.length)) snapshotSideOrder();
+  try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', sideDragV); }catch(err){}
+  setTimeout(function(){ if(sideDragV===it.dataset.v) it.classList.add('dragging'); }, 0);
+});
+sideListEl.addEventListener('dragover', function(e){
+  if(!sideDragV) return;
+  e.preventDefault();
+  try{ e.dataTransfer.dropEffect = 'move'; }catch(err){}
+  var it = e.target.closest('.sideitem[draggable="true"]');
+  var mark = null;
+  if(it && it.dataset.v!==sideDragV){
+    var r = it.getBoundingClientRect();
+    sideDropBefore = e.clientY < r.top + r.height/2;
+    sideDropV = it.dataset.v;
+    mark = it;
+  }else{
+    sideDropV = null;
+  }
+  var els = sideListEl.querySelectorAll('.drop-above,.drop-below');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below');
+  if(mark) mark.classList.add(sideDropBefore?'drop-above':'drop-below');
+});
+sideListEl.addEventListener('dragleave', function(e){
+  if(!sideDragV) return;
+  if(e.relatedTarget && sideListEl.contains(e.relatedTarget)) return;
+  sideDropV = null;
+  var els = sideListEl.querySelectorAll('.drop-above,.drop-below');
+  for(var i=0;i<els.length;i++) els[i].classList.remove('drop-above','drop-below');
+});
+sideListEl.addEventListener('drop', function(e){
+  if(!sideDragV) return;
+  e.preventDefault();
+  var dv = sideDragV, tv = sideDropV, before = sideDropBefore;
+  clearSideMarks();
+  sideDragV = null; sideDropV = null;
+  if(!tv || tv===dv) return;
+  var ids = sideDraggableItems().map(function(el){ return el.dataset.v; })
+    .filter(function(v){ return v && v!=='__NONE__'; });
+  var from = ids.indexOf(dv); if(from<0) return;
+  ids.splice(from,1);
+  var to = ids.indexOf(tv); if(to<0) return;
+  ids.splice(before ? to : to+1, 0, dv);
+  S.sideOrder = ids;
+  save(); renderSidebar();
+  toast('已调整归属人顺序','恢复默认',function(){
+    S.sideOrder = []; save(); renderSidebar(); toast('已恢复默认顺序');
+  });
+});
+sideListEl.addEventListener('dragend', function(){
+  clearSideMarks();
+  sideDragV = null; sideDropV = null;
+});
 
 /* ============ 设置项 ============ */
 function bindSettings(){
