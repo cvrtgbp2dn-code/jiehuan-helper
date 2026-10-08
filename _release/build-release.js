@@ -72,13 +72,6 @@ if (fs.existsSync(srcHtml)) {
   s = s.replace(/const REPO = '[^']*';/, "const REPO = '" + cfg.repo + "';");
   s = s.replace(/const BRANCH = '[^']*';/, "const BRANCH = '" + branch + "';");
   if (s !== before) { fs.writeFileSync(mainPath, s, 'utf8'); log('· 已写入更新源：' + cfg.owner + '/' + cfg.repo + '@' + branch); }
-
-  // 界面里的「复制下载链接」也要用真实用户名/仓库名
-  const htmlPath = path.join(BUILD, 'index.html');
-  let h = fs.readFileSync(htmlPath, 'utf8');
-  const hBefore = h;
-  h = h.replace(/'https:\/\/github\.com\/OWNER\/REPO\//, "'https://github.com/" + cfg.owner + "/" + cfg.repo + "/");
-  if (h !== hBefore) { fs.writeFileSync(htmlPath, h, 'utf8'); log('· 已写入下载链接：' + cfg.owner + '/' + cfg.repo); }
 })();
 
 const STAGE = path.join(BUILD, '_staging');
