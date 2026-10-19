@@ -913,7 +913,7 @@ function render(){
       '<td class="c"><input type="checkbox" data-sel="'+r.id+'"'+(on?' checked':'')+'></td>'+
       '<td class="l editable" data-f="project" data-id="'+r.id+'" title="'+esc(r.project)+'">'+esc(r.project)+'</td>'+
       '<td class="l editable person" data-f="person" data-id="'+r.id+'" title="'+esc(r.person||'')+'">'+esc(r.person||'')+'</td>'+
-      '<td class="date">'+esc(r.date ? r.date.slice(5) : '—')+'</td>'+
+      '<td class="date editable" data-f="date" data-id="'+r.id+'" title="'+esc(r.date||'')+'">'+esc(r.date ? r.date.slice(5) : '—')+'</td>'+
       '<td class="editable" data-f="count" data-id="'+r.id+'">'+r.count+'</td>'+
       '<td class="editable'+(r.note?' noteable':'')+'" data-f="bad" data-id="'+r.id+'"'+(r.note?' title="错单明细：'+esc(r.note)+'"':'')+'>'+r.bad+'</td>'+
       '<td class="eff">'+c.eff+'</td>'+
@@ -1140,11 +1140,18 @@ document.getElementById('tbody').addEventListener('dblclick', function(e){
   if(f==='count'||f==='bad'){ inp.type='number'; inp.style.textAlign='right'; }
   else inp.style.textAlign='left';
   if(f==='person') inp.style.paddingLeft='24px';
+  if(f==='date'){
+    // 日期列很窄，编辑框向右溢出显示完整日期（不挤压表格、不引起重排）
+    inp.type='date';
+    inp.value = rec.date || todayISO();
+    inp.style.width='170px'; inp.style.right='auto'; inp.style.zIndex='20'; inp.style.padding='0 6px';
+  }
   // 锁住当前列宽，编辑框脱离文档流，保证双击前后表格零位移
   td.style.width = td.offsetWidth+'px';
   td.style.position = 'relative';
-  td.innerHTML=''; td.appendChild(inp); inp.focus(); inp.select();
-  var done=false;
+  td.innerHTML=''; td.appendChild(inp);
+  if(f==='date'){ inp.focus(); } else { inp.focus(); inp.select(); }
+  var done=false, changedDate='';
   var finish=function(ok){
     if(done) return; done=true;
     if(ok){
@@ -1160,10 +1167,20 @@ document.getElementById('tbody').addEventListener('dblclick', function(e){
           if(rec.bad>rec.count) rec.bad=rec.count;
         }
       }
+      if(f==='date'){
+        // 只接受完整的 YYYY-MM-DD；输入框清空 = 取消修改（避免误删日期）
+        var dv=(inp.value||'').trim();
+        if(/^\d{4}-\d{2}-\d{2}$/.test(dv) && dv!==rec.date){ rec.date=dv; changedDate=dv; }
+      }
     }
     save(); render();
+    if(changedDate) toast('日期已改为 '+changedDate.slice(5));
   };
   inp.addEventListener('blur', function(){ finish(true); });
+  if(f==='date'){
+    // 从日历里选完即生效；手打没打完（值为空）时不算取消
+    inp.addEventListener('change', function(){ if(inp.value) finish(true); });
+  }
   inp.addEventListener('keydown', function(ev){
     if(ev.key==='Enter'){ ev.preventDefault(); finish(true); }
     if(ev.key==='Escape'){ ev.preventDefault(); finish(false); }
